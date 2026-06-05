@@ -1,6 +1,5 @@
 import {
   Search,
-  SlidersHorizontal,
   Download,
   ShoppingCart,
   MoreHorizontal,
@@ -206,7 +205,7 @@ export default function SalesPage() {
       <div className="bg-white border border-slate-200 rounded-lg">
         {/* Toolbar */}
         <div className="flex flex-wrap items-center gap-2.5 px-4 py-3 border-b border-slate-100">
-          <div className="relative flex-1 min-w-[180px] max-w-xs">
+          <div className="relative flex-1 min-w-45 max-w-xs">
             <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
@@ -272,7 +271,7 @@ export default function SalesPage() {
                 >
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center flex-shrink-0">
+                      <div className="w-6 h-6 rounded bg-slate-100 flex items-center justify-center shrink-0">
                         <ShoppingCart className="w-3 h-3 text-slate-400" />
                       </div>
                       <span className="text-[12px] font-medium text-slate-700 font-mono">

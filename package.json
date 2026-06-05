@@ -12,7 +12,13 @@
     "lucide-react": "^1.14.0",
     "next": "16.2.6",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "recharts": "^3.8.1",
+    "@heroui/react": "^3.1.0",
+    "@heroui/styles": "^3.1.0",
+    "@internationalized/date": "^3.12.2",
+    "date-fns": "^4.4.0",
+    "react-date-range": "^2.0.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

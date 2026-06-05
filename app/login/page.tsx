@@ -1,4 +1,57 @@
+"use client"
+
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+
 export default function LoginPage() {
+  const [error, setError] = useState("")
+  const [pending, setPending] = useState(false)
+  const router = useRouter()
+
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault()
+    setPending(true)
+    setError("")
+
+    const form = e.currentTarget
+    const email = (form.elements.namedItem("email") as HTMLInputElement).value
+    const password = (form.elements.namedItem("password") as HTMLInputElement)
+      .value
+    const remember = (form.elements.namedItem("remember") as HTMLInputElement)
+      .checked
+
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      )
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setError(data.message || "Login failed. Check your credentials.")
+        return
+      }
+
+      const maxAge = remember ? 7 * 24 * 60 * 60 : undefined
+      document.cookie = `jopad_token=${encodeURIComponent(data.token)}; path=/; samesite=lax${maxAge ? `; max-age=${maxAge}` : ""}`
+
+      if (data.mustChangePassword) {
+        router.push("/set-password")
+      } else {
+        router.push("/dashboard")
+      }
+    } catch {
+      setError("Could not reach the server. Please try again.")
+    } finally {
+      setPending(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-[860px] bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm flex">
@@ -63,7 +116,13 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <form className="space-y-4" noValidate>
+          <form className="space-y-4" onSubmit={handleSubmit} noValidate>
+            {error && (
+              <div className="px-3.5 py-2.5 rounded-lg bg-red-50 border border-red-200 text-red-700 text-sm">
+                {error}
+              </div>
+            )}
+
             <div>
               <label
                 htmlFor="email"
@@ -73,9 +132,11 @@ export default function LoginPage() {
               </label>
               <input
                 id="email"
+                name="email"
                 type="email"
                 autoComplete="email"
                 placeholder="you@yourbusiness.com"
+                required
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
@@ -97,9 +158,11 @@ export default function LoginPage() {
               </div>
               <input
                 id="password"
+                name="password"
                 type="password"
                 autoComplete="current-password"
                 placeholder="••••••••"
+                required
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition"
               />
             </div>
@@ -107,6 +170,7 @@ export default function LoginPage() {
             <div className="flex items-center gap-2.5 pt-1">
               <input
                 id="remember"
+                name="remember"
                 type="checkbox"
                 className="w-4 h-4 rounded border-slate-300 text-blue-600 cursor-pointer"
               />
@@ -120,9 +184,10 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors mt-2"
+              disabled={pending}
+              className="w-full bg-blue-600 hover:bg-blue-700 active:bg-blue-800 disabled:opacity-60 disabled:cursor-not-allowed text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors mt-2"
             >
-              Sign In
+              {pending ? "Signing in…" : "Sign In"}
             </button>
           </form>
 
@@ -135,5 +200,5 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
-  );
+  )
 }

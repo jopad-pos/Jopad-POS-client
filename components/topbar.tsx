@@ -1,7 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import { Bell, Search, RefreshCw } from "lucide-react";
+import { Bell, Search, RefreshCw, LogOut } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
   "/dashboard": { title: "Overview", subtitle: "Today, Tuesday 13 May 2026" },
@@ -47,9 +48,17 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   },
 };
 
+function getInitials(email: string): string {
+  const parts = email.split("@")[0].split(/[\s._-]/).filter(Boolean)
+  if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
+  return email.slice(0, 2).toUpperCase()
+}
+
 export default function Topbar() {
   const pathname = usePathname();
   const page = pageMeta[pathname] ?? { title: "Jopad POS", subtitle: "" };
+  const { user, logout } = useAuth();
+  const initials = user ? getInitials(user.email) : "…";
 
   return (
     <header className="h-[52px] bg-white border-b border-slate-200 flex items-center px-5 gap-4 flex-shrink-0">
@@ -93,9 +102,17 @@ export default function Topbar() {
         <div className="w-px h-5 bg-slate-200" />
 
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center cursor-pointer">
-            <span className="text-white text-[10px] font-semibold">NA</span>
+          <div className="w-7 h-7 rounded-full bg-slate-600 flex items-center justify-center">
+            <span className="text-white text-[10px] font-semibold">{initials}</span>
           </div>
+          <button
+            onClick={logout}
+            title="Sign out"
+            aria-label="Sign out"
+            className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
+          >
+            <LogOut className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
     </header>

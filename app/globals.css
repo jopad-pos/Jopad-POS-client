@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "@heroui/styles/utilities";
+@import "@heroui/styles/components/index.css";
+@import "@heroui/styles/themes/default";
 
 @theme {
   --font-sans: var(--font-inter);
