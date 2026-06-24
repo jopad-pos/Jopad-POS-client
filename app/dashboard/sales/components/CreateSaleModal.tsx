@@ -5,6 +5,7 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { Sale, PayMethod } from "./types";
 import { ModalOverlay, FormField, inputClass } from "./shared";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface Product {
   _id: string;
@@ -12,6 +13,16 @@ interface Product {
   category: string;
   sellPrice: number;
   qty: number;
+}
+
+interface CustomerOption {
+  _id: string;
+  name: string;
+}
+
+interface StaffOption {
+  _id: string;
+  name: string;
 }
 
 interface LineItemDraft {
@@ -46,7 +57,10 @@ const rowInput =
   "w-full px-2 py-1.5 text-[12px] border border-slate-200 rounded bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 transition";
 
 export default function CreateSaleModal({ onClose, onCreated }: Props) {
+  const { selectedBranchId } = useBranch();
   const [products, setProducts] = useState<Product[]>([]);
+  const [customers, setCustomers] = useState<CustomerOption[]>([]);
+  const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [customer, setCustomer] = useState("");
   const [cashier, setCashier] = useState("");
   const [method, setMethod] = useState<PayMethod>("Cash");
@@ -58,6 +72,12 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
   useEffect(() => {
     apiRequest<{ items: Product[] }>("/api/products?limit=500")
       .then((res) => setProducts(res.items.filter((p) => p.qty > 0)))
+      .catch(() => {});
+    apiRequest<{ items: CustomerOption[] }>("/api/customers?limit=500&status=Active")
+      .then((res) => setCustomers(res.items))
+      .catch(() => {});
+    apiRequest<{ staff: StaffOption[] }>("/api/staff?limit=500")
+      .then((res) => setStaffOptions(res.staff))
       .catch(() => {});
   }, []);
 
@@ -120,6 +140,7 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
           cashier: cashier.trim(),
           method,
           date: new Date(date).toISOString(),
+          branchId: selectedBranchId || undefined,
           lineItems: validItems.map((li) => ({
             productId: li.productId,
             name: li.name,
@@ -161,20 +182,32 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
               <FormField label="Customer">
-                <input
+                <select
                   className={inputClass}
                   value={customer}
                   onChange={(e) => setCustomer(e.target.value)}
-                  placeholder="Walk-in Customer"
-                />
+                >
+                  <option value="">Walk-in Customer</option>
+                  {customers.map((c) => (
+                    <option key={c._id} value={c.name}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
               </FormField>
               <FormField label="Cashier">
-                <input
+                <select
                   className={inputClass}
                   value={cashier}
                   onChange={(e) => setCashier(e.target.value)}
-                  placeholder="e.g. Diana A."
-                />
+                >
+                  <option value="">Select cashier…</option>
+                  {staffOptions.map((s) => (
+                    <option key={s._id} value={s.name}>
+                      {s.name}
+                    </option>
+                  ))}
+                </select>
               </FormField>
             </div>
 

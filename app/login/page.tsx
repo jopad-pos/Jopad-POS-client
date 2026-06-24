@@ -2,11 +2,13 @@
 
 import { useState } from "react"
 import { useRouter } from "next/navigation"
+import { useAuth } from "@/contexts/AuthContext"
 
 export default function LoginPage() {
   const [error, setError] = useState("")
   const [pending, setPending] = useState(false)
   const router = useRouter()
+  const { login } = useAuth()
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -38,7 +40,7 @@ export default function LoginPage() {
       }
 
       const maxAge = remember ? 7 * 24 * 60 * 60 : undefined
-      document.cookie = `jopad_token=${encodeURIComponent(data.token)}; path=/; samesite=lax${maxAge ? `; max-age=${maxAge}` : ""}`
+      await login(data.token, maxAge)
 
       if (data.mustChangePassword) {
         router.push("/set-password")

@@ -1,6 +1,6 @@
 "use client";
 
-import { X, Pencil } from "lucide-react";
+import { X, Pencil, PackageCheck } from "lucide-react";
 import { Purchase, purchaseStatusConfig } from "./types";
 import { ModalOverlay } from "./shared";
 
@@ -8,14 +8,17 @@ interface Props {
   purchase: Purchase;
   onClose: () => void;
   onEdit: () => void;
+  onReceive: () => void;
 }
 
-export default function ViewPurchaseModal({ purchase, onClose, onEdit }: Props) {
+export default function ViewPurchaseModal({ purchase, onClose, onEdit, onReceive }: Props) {
   const s = purchaseStatusConfig[purchase.status];
+  const hasLineItems = (purchase.lineItems?.length ?? 0) > 0;
+  const canReceive = hasLineItems && !purchase.stockUpdated;
 
   return (
     <ModalOverlay onClose={onClose}>
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
           <div>
@@ -64,18 +67,66 @@ export default function ViewPurchaseModal({ purchase, onClose, onEdit }: Props) 
               <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-1">
                 Status
               </p>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
                 <span className={`text-[11px] px-2 py-0.5 rounded font-medium ${s.class}`}>
                   {purchase.status}
                 </span>
+                {purchase.stockUpdated && (
+                  <span className="text-[11px] px-2 py-0.5 rounded font-medium bg-emerald-50 text-emerald-700 flex items-center gap-1">
+                    <PackageCheck className="w-3 h-3" />
+                    Stock Updated
+                  </span>
+                )}
               </div>
             </div>
             <Row label="Date" value={purchase.date} />
           </div>
+
+          {/* Line Items */}
+          {hasLineItems && (
+            <div>
+              <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wide mb-2">
+                Line Items
+              </p>
+              <div className="border border-slate-200 rounded-lg overflow-hidden">
+                <table className="w-full text-[12px]">
+                  <thead>
+                    <tr className="bg-slate-50 border-b border-slate-200">
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Product</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide w-16">Qty</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide w-24">Buy Price</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {purchase.lineItems!.map((li, idx) => (
+                      <tr key={idx}>
+                        <td className="px-3 py-2 text-slate-700">{li.name}</td>
+                        <td className="px-3 py-2 text-slate-700 tabular-nums">{li.qty}</td>
+                        <td className="px-3 py-2 text-slate-700 tabular-nums">
+                          {li.buyPrice > 0 ? `UGX ${li.buyPrice.toLocaleString()}` : "—"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
 
-        <div className="flex justify-end px-5 py-4 border-t border-slate-100">
+        <div className="flex items-center justify-between px-5 py-4 border-t border-slate-100">
+          <div>
+            {canReceive && (
+              <button
+                onClick={onReceive}
+                className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition"
+              >
+                <PackageCheck className="w-4 h-4" />
+                Receive Stock
+              </button>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="px-4 py-2 text-[13px] text-slate-600 border border-slate-200 rounded-md hover:bg-slate-50 transition"

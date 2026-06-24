@@ -2,14 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
+import { useBranchQuery } from "@/contexts/BranchContext";
 import { Product, StatsData } from "./components/types";
+import { printLabels } from "../labels/printLabels";
 import StockTable from "./components/StockTable";
 import ProductModal from "./components/ProductModal";
 import AdjustModal from "./components/AdjustModal";
 import HistoryModal from "./components/HistoryModal";
 import DeleteConfirm from "./components/DeleteConfirm";
+import PurchaseModal from "../purchases/components/PurchaseModal";
 
 export default function StockPage() {
+  const branchQuery = useBranchQuery();
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<string[]>([]);
   const [stats, setStats] = useState<StatsData>({
@@ -32,19 +36,21 @@ export default function StockPage() {
   const [adjustProduct, setAdjustProduct] = useState<Product | null>(null);
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
+  const [purchaseProduct, setPurchaseProduct] = useState<Product | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      apiRequest<{ items: Product[] }>("/api/products?limit=1000"),
-      apiRequest<string[]>("/api/products/categories"),
-      apiRequest<StatsData>("/api/products/stats"),
+      apiRequest<{ items: Product[] }>(`/api/products?limit=1000${branchQuery}`),
+      apiRequest<string[]>("/api/categories"),
+      apiRequest<StatsData>(`/api/products/stats?1=1${branchQuery}`),
     ])
       .then(([productsRes, catsRes, statsRes]) => {
         if (cancelled) return;
         setProducts(productsRes.items);
         setCategories(catsRes);
         setStats(statsRes);
+        setError("");
       })
       .catch((err) => {
         if (cancelled) return;
@@ -54,11 +60,11 @@ export default function StockPage() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [branchQuery]);
 
   const refreshMeta = () =>
     Promise.all([
-      apiRequest<string[]>("/api/products/categories"),
+      apiRequest<string[]>("/api/categories"),
       apiRequest<StatsData>("/api/products/stats"),
     ])
       .then(([cats, st]) => {
@@ -66,6 +72,16 @@ export default function StockPage() {
         setStats(st);
       })
       .catch(() => {});
+
+  const handleAddCategory = async (name: string) => {
+    await apiRequest<{ name: string }>("/api/categories", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    setCategories((prev) =>
+      [...new Set([...prev, name])].sort((a, b) => a.localeCompare(b))
+    );
+  };
 
   // Client-side filtering
   const filtered = products.filter((p) => {
@@ -164,10 +180,13 @@ export default function StockPage() {
         lowStockOnly={lowStockOnly}
         onLowStockToggle={() => setLowStockOnly((v) => !v)}
         onAddClick={() => setAddOpen(true)}
+        onAddCategory={handleAddCategory}
         onEdit={setEditProduct}
         onAdjust={setAdjustProduct}
         onHistory={setHistoryProduct}
         onDelete={setDeleteProduct}
+        onPurchaseOrder={setPurchaseProduct}
+      onPrintLabel={(p) => printLabels([p], { size: "medium", copies: 1, showName: true, showPrice: true, showSku: true })}
       />
 
       {/* Modals */}
@@ -177,6 +196,7 @@ export default function StockPage() {
           categories={categories}
           onClose={() => setAddOpen(false)}
           onSaved={handleProductSaved}
+          onAddCategory={handleAddCategory}
         />
       )}
       {editProduct && (
@@ -185,6 +205,7 @@ export default function StockPage() {
           categories={categories}
           onClose={() => setEditProduct(null)}
           onSaved={handleProductSaved}
+          onAddCategory={handleAddCategory}
         />
       )}
       {adjustProduct && (
@@ -202,6 +223,19 @@ export default function StockPage() {
           product={deleteProduct}
           onClose={() => setDeleteProduct(null)}
           onDeleted={handleDeleted}
+        />
+      )}
+      {purchaseProduct && (
+        <PurchaseModal
+          purchase={null}
+          initialLineItems={[{
+            productId: purchaseProduct._id,
+            name: purchaseProduct.name,
+            qty: "1",
+            buyPrice: String(purchaseProduct.buyPrice),
+          }]}
+          onClose={() => setPurchaseProduct(null)}
+          onSaved={() => setPurchaseProduct(null)}
         />
       )}
     </div>

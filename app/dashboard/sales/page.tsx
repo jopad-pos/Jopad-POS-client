@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
+import { useBranchQuery } from "@/contexts/BranchContext";
 import { Sale, isToday } from "./components/types";
 import SalesTable from "./components/SalesTable";
 import ViewSaleModal from "./components/ViewSaleModal";
@@ -11,6 +12,7 @@ import DeleteConfirm from "./components/DeleteConfirm";
 const PAGE_SIZE = 15;
 
 export default function SalesPage() {
+  const branchQuery = useBranchQuery();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -31,9 +33,9 @@ export default function SalesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    apiRequest<{ items: Sale[] }>("/api/sales?limit=500")
+    apiRequest<{ items: Sale[] }>(`/api/sales?limit=500${branchQuery}`)
       .then((res) => {
-        if (!cancelled) setSales(res.items);
+        if (!cancelled) { setSales(res.items); setError(""); }
       })
       .catch((err) => {
         if (!cancelled)
@@ -43,7 +45,7 @@ export default function SalesPage() {
         if (!cancelled) setLoading(false);
       });
     return () => { cancelled = true; };
-  }, []);
+  }, [branchQuery]);
 
   // Derived cashier list for the filter dropdown
   const cashiers = useMemo(

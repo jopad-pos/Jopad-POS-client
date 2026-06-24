@@ -11,6 +11,7 @@ import {
   toInputDate,
 } from "./types";
 import { ModalOverlay, FormField, HeroDatePicker, inputClass } from "./shared";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface Props {
   expense: Expense | null;
@@ -20,6 +21,7 @@ interface Props {
 
 export default function ExpenseModal({ expense, onClose, onSaved }: Props) {
   const isEdit = !!expense;
+  const { selectedBranchId } = useBranch();
 
   const [form, setForm] = useState<ExpenseFormState>(
     expense
@@ -52,6 +54,7 @@ export default function ExpenseModal({ expense, onClose, onSaved }: Props) {
         description: form.description.trim(),
         amount: Number(form.amount),
         date: form.date,
+        ...(!isEdit && { branchId: selectedBranchId || undefined }),
       };
 
       const saved = isEdit

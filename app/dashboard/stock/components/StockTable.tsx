@@ -7,7 +7,11 @@ import {
   MoreHorizontal,
   AlertTriangle,
   Download,
+  X,
+  ChevronDown,
+  ShoppingCart,
 } from "lucide-react";
+import { ApiError } from "@/lib/api";
 import { Product, statusConfig, exportCSV } from "./types";
 
 // ─── Row Menu ─────────────────────────────────────────────────────────────────
@@ -16,11 +20,13 @@ function RowMenu({
   onEdit,
   onAdjust,
   onHistory,
+  onPrintLabel,
   onDelete,
 }: {
   onEdit: () => void;
   onAdjust: () => void;
   onHistory: () => void;
+  onPrintLabel: () => void;
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -65,6 +71,7 @@ function RowMenu({
           {item("Edit", onEdit)}
           {item("Adjust Stock", onAdjust)}
           {item("View History", onHistory)}
+          {item("Print Label", onPrintLabel)}
           <div className="border-t border-slate-100 my-1" />
           {item("Delete", onDelete, true)}
         </div>
@@ -88,10 +95,13 @@ interface Props {
   lowStockOnly: boolean;
   onLowStockToggle: () => void;
   onAddClick: () => void;
+  onAddCategory: (name: string) => Promise<void>;
   onEdit: (p: Product) => void;
   onAdjust: (p: Product) => void;
   onHistory: (p: Product) => void;
   onDelete: (p: Product) => void;
+  onPurchaseOrder: (p: Product) => void;
+  onPrintLabel: (p: Product) => void;
 }
 
 export default function StockTable({
@@ -107,12 +117,41 @@ export default function StockTable({
   lowStockOnly,
   onLowStockToggle,
   onAddClick,
+  onAddCategory,
   onEdit,
   onAdjust,
   onHistory,
   onDelete,
+  onPurchaseOrder,
+  onPrintLabel,
 }: Props) {
-  const allCategories = ["All", ...categories];
+  const [addCatMode, setAddCatMode] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [addCatLoading, setAddCatLoading] = useState(false);
+  const [addCatError, setAddCatError] = useState("");
+
+  const handleAddCat = async () => {
+    if (!newCatName.trim()) return;
+    setAddCatLoading(true);
+    setAddCatError("");
+    try {
+      await onAddCategory(newCatName.trim());
+      setNewCatName("");
+      setAddCatMode(false);
+    } catch (err) {
+      setAddCatError(
+        err instanceof ApiError ? err.message : "Failed to add category"
+      );
+    } finally {
+      setAddCatLoading(false);
+    }
+  };
+
+  const cancelAddCat = () => {
+    setAddCatMode(false);
+    setNewCatName("");
+    setAddCatError("");
+  };
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg flex flex-col flex-1 min-h-0">
@@ -129,20 +168,63 @@ export default function StockTable({
           />
         </div>
 
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {allCategories.map((cat) => (
-            <button
-              key={cat}
-              onClick={() => onCategoryChange(cat)}
-              className={`text-[11px] px-2.5 py-1.5 rounded-md font-medium whitespace-nowrap transition-colors ${
-                activeCategory === cat
-                  ? "bg-slate-900 text-white"
-                  : "bg-slate-50 text-slate-500 border border-slate-200 hover:bg-slate-100"
-              }`}
+        {/* Category dropdown + add */}
+        <div className="flex items-center gap-1.5">
+          <div className="relative">
+            <select
+              value={activeCategory}
+              onChange={(e) => onCategoryChange(e.target.value)}
+              className="appearance-none text-[12px] pl-2.5 pr-7 py-1.5 rounded-md border border-slate-200 bg-slate-50 text-slate-700 focus:outline-none focus:ring-1 focus:ring-blue-500 transition cursor-pointer"
             >
-              {cat}
+              <option value="All">All Categories</option>
+              {categories.map((cat) => (
+                <option key={cat} value={cat}>
+                  {cat}
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="w-3 h-3 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+          </div>
+
+          {!addCatMode ? (
+            <button
+              onClick={() => setAddCatMode(true)}
+              title="Add category"
+              className="p-1.5 rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition"
+            >
+              <Plus className="w-3.5 h-3.5" />
             </button>
-          ))}
+          ) : (
+            <>
+              <input
+                autoFocus
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleAddCat();
+                  if (e.key === "Escape") cancelAddCat();
+                }}
+                placeholder="Category name"
+                className="text-[12px] px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 transition w-36"
+              />
+              <button
+                onClick={handleAddCat}
+                disabled={addCatLoading || !newCatName.trim()}
+                className="text-[12px] px-2.5 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition"
+              >
+                {addCatLoading ? "…" : "Add"}
+              </button>
+              <button
+                onClick={cancelAddCat}
+                className="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+              {addCatError && (
+                <span className="text-[11px] text-red-500">{addCatError}</span>
+              )}
+            </>
+          )}
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
@@ -276,13 +358,26 @@ export default function StockTable({
                       </div>
                     </td>
                     <td className="px-4 py-3">
-                      <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                        <RowMenu
-                          onEdit={() => onEdit(p)}
-                          onAdjust={() => onAdjust(p)}
-                          onHistory={() => onHistory(p)}
-                          onDelete={() => onDelete(p)}
-                        />
+                      <div className="flex items-center gap-1.5 justify-end">
+                        {(p.status === "Low" || p.status === "Critical" || p.status === "Out") && (
+                          <button
+                            onClick={() => onPurchaseOrder(p)}
+                            title="Create purchase order"
+                            className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition whitespace-nowrap"
+                          >
+                            <ShoppingCart className="w-3 h-3" />
+                            Order
+                          </button>
+                        )}
+                        <div className="opacity-0 group-hover:opacity-100 transition-opacity">
+                          <RowMenu
+                            onEdit={() => onEdit(p)}
+                            onAdjust={() => onAdjust(p)}
+                            onHistory={() => onHistory(p)}
+                            onPrintLabel={() => onPrintLabel(p)}
+                            onDelete={() => onDelete(p)}
+                          />
+                        </div>
                       </div>
                     </td>
                   </tr>

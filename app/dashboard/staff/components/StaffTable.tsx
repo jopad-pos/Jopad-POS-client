@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Search, Plus, MoreHorizontal, Pencil, Trash2, UserCheck, UserX } from "lucide-react";
+import { Search, Plus, MoreHorizontal, Pencil, Trash2, UserCheck, UserX, KeyRound } from "lucide-react";
 import { StaffMember, ROLES, roleConfig, initials, formatJoined } from "./types";
 
 // ── Row action menu ───────────────────────────────────────────────────────────
@@ -9,11 +9,13 @@ import { StaffMember, ROLES, roleConfig, initials, formatJoined } from "./types"
 function RowMenu({
   member,
   onEdit,
+  onSetPassword,
   onToggleActive,
   onDelete,
 }: {
   member: StaffMember;
   onEdit: () => void;
+  onSetPassword: () => void;
   onToggleActive: () => void;
   onDelete: () => void;
 }) {
@@ -60,8 +62,9 @@ function RowMenu({
         <MoreHorizontal className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
+        <div className="absolute right-0 z-20 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
           {item("Edit", <Pencil className="w-3.5 h-3.5" />, onEdit)}
+          {item("Set Password", <KeyRound className="w-3.5 h-3.5" />, onSetPassword)}
           {item(
             member.isActive ? "Deactivate" : "Activate",
             member.isActive ? (
@@ -94,6 +97,7 @@ interface Props {
   onRoleFilterChange: (v: string) => void;
   onNew: () => void;
   onEdit: (s: StaffMember) => void;
+  onSetPassword: (s: StaffMember) => void;
   onToggleActive: (s: StaffMember) => void;
   onDelete: (s: StaffMember) => void;
 }
@@ -109,11 +113,12 @@ export default function StaffTable({
   onRoleFilterChange,
   onNew,
   onEdit,
+  onSetPassword,
   onToggleActive,
   onDelete,
 }: Props) {
   return (
-    <div className="bg-white border border-slate-200 rounded-lg flex flex-col h-[480px]">
+    <div className="bg-white border border-slate-200 rounded-lg flex flex-col flex-1 min-h-0">
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2.5 px-4 py-3 border-b border-slate-100 shrink-0">
         <div className="relative flex-1 min-w-[180px] max-w-xs">
@@ -296,6 +301,7 @@ export default function StaffTable({
                       <RowMenu
                         member={s}
                         onEdit={() => onEdit(s)}
+                        onSetPassword={() => onSetPassword(s)}
                         onToggleActive={() => onToggleActive(s)}
                         onDelete={() => onDelete(s)}
                       />

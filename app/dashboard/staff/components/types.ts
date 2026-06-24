@@ -8,6 +8,7 @@ export interface StaffMember {
   staffRole?: StaffRole;
   isActive: boolean;
   createdAt: string;
+  branchId?: { _id: string; name: string; location: string } | null;
 }
 
 export const ROLES: StaffRole[] = [

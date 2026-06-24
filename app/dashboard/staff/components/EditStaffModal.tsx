@@ -4,6 +4,7 @@ import { useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { StaffMember, StaffRole, ROLES } from "./types";
 import { ModalOverlay, FormField, inputCls } from "./shared";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface Props {
   staff: StaffMember;
@@ -12,11 +13,19 @@ interface Props {
 }
 
 export default function EditStaffModal({ staff, onClose, onUpdated }: Props) {
+  const { branches } = useBranch();
+
+  const currentBranchId =
+    staff.branchId && typeof staff.branchId === "object"
+      ? staff.branchId._id
+      : (staff.branchId as string | null | undefined) ?? "";
+
   const [form, setForm] = useState({
     name: staff.name,
     email: staff.email,
     phone: staff.phone ?? "",
     staffRole: staff.staffRole ?? "",
+    branchId: currentBranchId,
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -33,6 +42,7 @@ export default function EditStaffModal({ staff, onClose, onUpdated }: Props) {
           email: form.email,
           phone: form.phone || undefined,
           staffRole: form.staffRole || null,
+          branchId: form.branchId || null,
         }),
       });
       onUpdated();
@@ -93,6 +103,21 @@ export default function EditStaffModal({ staff, onClose, onUpdated }: Props) {
               ))}
             </select>
           </FormField>
+
+          {branches.length > 0 && (
+            <FormField label="Branch">
+              <select
+                value={form.branchId}
+                onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                className={inputCls}
+              >
+                <option value="">All branches (no restriction)</option>
+                {branches.filter((b) => b.isActive).map((b) => (
+                  <option key={b._id} value={b._id}>{b.name}</option>
+                ))}
+              </select>
+            </FormField>
+          )}
 
           {error && <p className="text-[12px] text-red-600">{error}</p>}
 

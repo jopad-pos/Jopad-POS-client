@@ -1,20 +1,29 @@
 "use client";
 
 import { useState } from "react";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { Product, ProductFormState, emptyForm } from "./types";
 import { ModalOverlay, FormField, inputClass } from "./shared";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface Props {
   product: Product | null;
   categories: string[];
   onClose: () => void;
   onSaved: (p: Product) => void;
+  onAddCategory: (name: string) => Promise<void>;
 }
 
-export default function ProductModal({ product, categories, onClose, onSaved }: Props) {
+export default function ProductModal({
+  product,
+  categories,
+  onClose,
+  onSaved,
+  onAddCategory,
+}: Props) {
   const isEdit = !!product;
+  const { selectedBranchId } = useBranch();
   const [form, setForm] = useState<ProductFormState>(
     product
       ? {
@@ -32,12 +41,45 @@ export default function ProductModal({ product, categories, onClose, onSaved }: 
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [catOpen, setCatOpen] = useState(false);
+
+  // Add-category inline state
+  const [showNewCat, setShowNewCat] = useState(false);
+  const [newCatName, setNewCatName] = useState("");
+  const [addCatLoading, setAddCatLoading] = useState(false);
+  const [addCatError, setAddCatError] = useState("");
 
   const set =
     (key: keyof ProductFormState) =>
-    (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    (
+      e: React.ChangeEvent<
+        HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+      >
+    ) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  const handleAddNewCat = async () => {
+    if (!newCatName.trim()) return;
+    setAddCatLoading(true);
+    setAddCatError("");
+    try {
+      await onAddCategory(newCatName.trim());
+      setForm((f) => ({ ...f, category: newCatName.trim() }));
+      setNewCatName("");
+      setShowNewCat(false);
+    } catch (err) {
+      setAddCatError(
+        err instanceof ApiError ? err.message : "Failed to add category"
+      );
+    } finally {
+      setAddCatLoading(false);
+    }
+  };
+
+  const cancelNewCat = () => {
+    setShowNewCat(false);
+    setNewCatName("");
+    setAddCatError("");
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +100,7 @@ export default function ProductModal({ product, categories, onClose, onSaved }: 
         sellPrice: Number(form.sellPrice) || 0,
         barcode: form.barcode.trim() || undefined,
         description: form.description.trim(),
+        ...(!isEdit && { branchId: selectedBranchId || undefined }),
       };
       const saved = isEdit
         ? await apiRequest<Product>(`/api/products/${product._id}`, {
@@ -109,29 +152,67 @@ export default function ProductModal({ product, categories, onClose, onSaved }: 
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Category">
-              <div className="relative">
-                <input
-                  className={inputClass}
-                  value={form.category}
-                  onChange={set("category")}
-                  onFocus={() => setCatOpen(true)}
-                  onBlur={() => setTimeout(() => setCatOpen(false), 150)}
-                  placeholder="e.g. Groceries"
-                />
-                {catOpen && categories.length > 0 && (
-                  <ul className="absolute z-10 mt-1 w-full bg-white border border-slate-200 rounded-md shadow-lg max-h-36 overflow-y-auto">
-                    {categories
-                      .filter((c) => c.toLowerCase().includes(form.category.toLowerCase()))
-                      .map((c) => (
-                        <li
-                          key={c}
-                          onMouseDown={() => setForm((f) => ({ ...f, category: c }))}
-                          className="px-3 py-1.5 text-[12px] text-slate-700 hover:bg-slate-50 cursor-pointer"
-                        >
-                          {c}
-                        </li>
-                      ))}
-                  </ul>
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <select
+                    className={`${inputClass} flex-1`}
+                    value={form.category}
+                    onChange={set("category")}
+                  >
+                    <option value="">— Select category —</option>
+                    {categories.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewCat((v) => !v)}
+                    title="Add new category"
+                    className="p-1.5 rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {showNewCat && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={newCatName}
+                        onChange={(e) => setNewCatName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddNewCat();
+                          }
+                          if (e.key === "Escape") cancelNewCat();
+                        }}
+                        placeholder="New category name"
+                        className={`${inputClass} flex-1`}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddNewCat}
+                        disabled={addCatLoading || !newCatName.trim()}
+                        className="text-[12px] px-2.5 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition flex-shrink-0"
+                      >
+                        {addCatLoading ? "…" : "Add"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelNewCat}
+                        className="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition flex-shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {addCatError && (
+                      <p className="text-[11px] text-red-500">{addCatError}</p>
+                    )}
+                  </div>
                 )}
               </div>
             </FormField>

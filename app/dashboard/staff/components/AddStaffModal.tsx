@@ -5,6 +5,7 @@ import { Eye, EyeOff } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { ROLES } from "./types";
 import { ModalOverlay, FormField, inputCls } from "./shared";
+import { useBranch } from "@/contexts/BranchContext";
 
 interface Props {
   onClose: () => void;
@@ -12,12 +13,14 @@ interface Props {
 }
 
 export default function AddStaffModal({ onClose, onCreated }: Props) {
+  const { branches } = useBranch();
   const [form, setForm] = useState({
     name: "",
     email: "",
     phone: "",
     staffRole: "",
     password: "",
+    branchId: "",
   });
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState("");
@@ -40,6 +43,7 @@ export default function AddStaffModal({ onClose, onCreated }: Props) {
           password: form.password,
           phone: form.phone || undefined,
           staffRole: form.staffRole,
+          branchId: form.branchId || undefined,
         }),
       });
       onCreated();
@@ -101,6 +105,21 @@ export default function AddStaffModal({ onClose, onCreated }: Props) {
               ))}
             </select>
           </FormField>
+
+          {branches.length > 0 && (
+            <FormField label="Branch">
+              <select
+                value={form.branchId}
+                onChange={(e) => setForm({ ...form, branchId: e.target.value })}
+                className={inputCls}
+              >
+                <option value="">All branches (no restriction)</option>
+                {branches.filter((b) => b.isActive).map((b) => (
+                  <option key={b._id} value={b._id}>{b.name}</option>
+                ))}
+              </select>
+            </FormField>
+          )}
 
           <FormField label="Password" required>
             <div className="relative">

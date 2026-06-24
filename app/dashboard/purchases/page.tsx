@@ -2,15 +2,18 @@
 
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
+import { useBranchQuery } from "@/contexts/BranchContext";
 import { Purchase, Expense } from "./components/types";
 import PurchasesTable from "./components/PurchasesTable";
 import ExpensesTable from "./components/ExpensesTable";
 import PurchaseModal from "./components/PurchaseModal";
 import ExpenseModal from "./components/ExpenseModal";
 import ViewPurchaseModal from "./components/ViewPurchaseModal";
+import ReceiveModal from "./components/ReceiveModal";
 import DeleteConfirm from "./components/DeleteConfirm";
 
 export default function PurchasesPage() {
+  const branchQuery = useBranchQuery();
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,6 +24,7 @@ export default function PurchasesPage() {
   const [editPurchase, setEditPurchase] = useState<Purchase | null>(null);
   const [viewPurchase, setViewPurchase] = useState<Purchase | null>(null);
   const [deletePurchase, setDeletePurchase] = useState<Purchase | null>(null);
+  const [receivePurchase, setReceivePurchase] = useState<Purchase | null>(null);
 
   // Expense modal state
   const [addExpenseOpen, setAddExpenseOpen] = useState(false);
@@ -31,11 +35,9 @@ export default function PurchasesPage() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError("");
     Promise.all([
-      apiRequest<{ items: Purchase[] }>("/api/purchases?limit=1000"),
-      apiRequest<{ items: Expense[] }>("/api/expenses?limit=1000"),
+      apiRequest<{ items: Purchase[] }>(`/api/purchases?limit=1000${branchQuery}`),
+      apiRequest<{ items: Expense[] }>(`/api/expenses?limit=1000${branchQuery}`),
     ])
       .then(([purchasesRes, expensesRes]) => {
         if (cancelled) return;
@@ -52,7 +54,7 @@ export default function PurchasesPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [branchQuery]);
 
   // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -73,6 +75,12 @@ export default function PurchasesPage() {
   const handlePurchaseDeleted = (id: string) => {
     setPurchases((prev) => prev.filter((p) => p._id !== id));
     setDeletePurchase(null);
+  };
+
+  const handleReceived = (updated: Purchase) => {
+    setPurchases((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
+    setReceivePurchase(null);
+    setViewPurchase(null);
   };
 
   const handleExpenseSaved = (saved: Expense) => {
@@ -209,6 +217,17 @@ export default function PurchasesPage() {
             setEditPurchase(viewPurchase);
             setViewPurchase(null);
           }}
+          onReceive={() => {
+            setReceivePurchase(viewPurchase);
+            setViewPurchase(null);
+          }}
+        />
+      )}
+      {receivePurchase && (
+        <ReceiveModal
+          purchase={receivePurchase}
+          onClose={() => setReceivePurchase(null)}
+          onReceived={handleReceived}
         />
       )}
       {deletePurchase && (

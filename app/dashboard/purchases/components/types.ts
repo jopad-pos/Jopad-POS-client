@@ -1,5 +1,12 @@
 export type PurchaseStatus = "Received" | "Pending" | "Partial";
 
+export interface PurchaseLineItem {
+  productId: string;
+  name: string;
+  qty: number;
+  buyPrice: number;
+}
+
 export interface Purchase {
   _id: string;
   ref: string;
@@ -9,6 +16,8 @@ export interface Purchase {
   status: PurchaseStatus;
   date: string;
   items: number;
+  lineItems?: PurchaseLineItem[];
+  stockUpdated?: boolean;
 }
 
 export interface Expense {
