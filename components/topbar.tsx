@@ -74,6 +74,7 @@ function getInitials(email: string): string {
 function BranchSelector() {
   const { branches, selectedBranchId, selectedBranch, setSelectedBranchId } =
     useBranch();
+  const { profile } = useAuth();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -86,6 +87,8 @@ function BranchSelector() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  // Only business owners can switch branches
+  if (profile?.role !== "client") return null;
   // Don't render if client only has one branch (or none yet)
   if (branches.length <= 1) return null;
 

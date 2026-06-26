@@ -179,6 +179,7 @@ export default function PurchasesPage() {
         error={error}
         onAddClick={() => setAddPurchaseOpen(true)}
         onView={setViewPurchase}
+        onReceive={setReceivePurchase}
         onEdit={setEditPurchase}
         onDelete={setDeletePurchase}
       />

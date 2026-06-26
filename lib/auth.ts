@@ -3,6 +3,8 @@ export interface JWTUser {
   email: string
   role: "client" | "staff"
   clientId: string | null
+  branchId?: string | null
+  staffRole?: string | null
   iat: number
   exp: number
 }

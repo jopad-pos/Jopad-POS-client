@@ -36,6 +36,7 @@ type NavItem = {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   featureKey?: FeatureKey;
+  ownerOnly?: boolean;
 };
 
 const navGroups: { group: string; items: NavItem[] }[] = [
@@ -62,7 +63,7 @@ const navGroups: { group: string; items: NavItem[] }[] = [
       { label: "Customers", href: "/dashboard/customers", icon: Users, featureKey: "customers" },
       { label: "Suppliers", href: "/dashboard/suppliers", icon: Truck, featureKey: "suppliers" },
       { label: "Staff", href: "/dashboard/staff", icon: UserCog, featureKey: "staff" },
-      { label: "Branches", href: "/dashboard/branches", icon: GitBranch },
+      { label: "Branches", href: "/dashboard/branches", icon: GitBranch, ownerOnly: true },
     ],
   },
   {
@@ -182,8 +183,11 @@ export default function Sidebar() {
       {/* Navigation */}
       <nav className="flex-1 px-3 py-3 overflow-y-auto space-y-4">
         {navGroups.map((group) => {
-          // Hide items the staff role can't access; plan-locked items are shown but dimmed
-          const visibleItems = group.items.filter((item) => hasRoleAccess(item.featureKey));
+          // Hide owner-only items from staff, and items the staff role can't access;
+          // plan-locked items are shown but dimmed
+          const visibleItems = group.items.filter(
+            (item) => (!item.ownerOnly || isOwner) && hasRoleAccess(item.featureKey),
+          );
           if (visibleItems.length === 0) return null;
           return (
             <div key={group.group || "main"}>

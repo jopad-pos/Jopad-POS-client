@@ -238,8 +238,8 @@ const ALL_SECTIONS: {
   icon: React.ComponentType<{ className?: string }>;
   ownerOnly: boolean;
 }[] = [
-  { id: "store", label: "Store Details", icon: Store, ownerOnly: false },
-  { id: "receipt", label: "Receipt Settings", icon: Printer, ownerOnly: false },
+  { id: "store", label: "Store Details", icon: Store, ownerOnly: true },
+  { id: "receipt", label: "Receipt Settings", icon: Printer, ownerOnly: true },
   { id: "notifications", label: "Notifications", icon: Bell, ownerOnly: false },
   { id: "permissions", label: "Staff Access", icon: ShieldCheck, ownerOnly: true },
   { id: "account", label: "Account & Security", icon: Lock, ownerOnly: false },
@@ -334,6 +334,13 @@ export default function SettingsPage() {
         setReceiptForm(makeReceiptForm(data));
         setAccountForm({ name: data.name });
         setPermissionsForm(makePermissionsForm(data.staffPermissions));
+        // Staff can't open owner-only sections — land them on a visible one
+        if (data.role !== "client" && ALL_SECTIONS.find((s) => s.id === "store")?.ownerOnly) {
+          setActive((cur) => {
+            const section = ALL_SECTIONS.find((s) => s.id === cur);
+            return section && !section.ownerOnly ? cur : "notifications";
+          });
+        }
       })
       .catch(() => {/* silently fail */});
   }, []);

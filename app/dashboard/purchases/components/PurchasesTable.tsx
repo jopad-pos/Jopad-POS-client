@@ -17,10 +17,12 @@ const PAGE_SIZE = 10;
 
 function RowMenu({
   onView,
+  onReceive,
   onEdit,
   onDelete,
 }: {
   onView: () => void;
+  onReceive?: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -63,6 +65,7 @@ function RowMenu({
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
           {item("View Details", onView)}
+          {onReceive && item("Receive Stock", onReceive)}
           {item("Edit", onEdit)}
           <div className="border-t border-slate-100 my-1" />
           {item("Delete", onDelete, true)}
@@ -115,6 +118,7 @@ interface Props {
   error: string;
   onAddClick: () => void;
   onView: (p: Purchase) => void;
+  onReceive: (p: Purchase) => void;
   onEdit: (p: Purchase) => void;
   onDelete: (p: Purchase) => void;
 }
@@ -125,6 +129,7 @@ export default function PurchasesTable({
   error,
   onAddClick,
   onView,
+  onReceive,
   onEdit,
   onDelete,
 }: Props) {
@@ -291,6 +296,7 @@ export default function PurchasesTable({
                       <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                         <RowMenu
                           onView={() => onView(p)}
+                          onReceive={p.status !== "Received" ? () => onReceive(p) : undefined}
                           onEdit={() => onEdit(p)}
                           onDelete={() => onDelete(p)}
                         />

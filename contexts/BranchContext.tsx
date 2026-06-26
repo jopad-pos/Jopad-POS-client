@@ -42,9 +42,13 @@ export function BranchProvider({ children }: { children: React.ReactNode }) {
     try {
       const data = await apiRequest<Branch[]>("/api/branches");
       setBranches(data);
-      // If previously selected branch no longer exists/is active, reset to all
       setSelectedBranchIdState((prev) => {
+        // If the previously selected branch no longer exists/is active, reset
         if (prev && !data.find((b) => b._id === prev && b.isActive)) return null;
+        // If exactly one branch is available and nothing is selected, auto-select it.
+        // This ensures staff who are locked to a single branch always have an explicit
+        // branchId in their API calls rather than relying solely on server-side JWT enforcement.
+        if (!prev && data.length === 1 && data[0].isActive) return data[0]._id;
         return prev;
       });
     } catch {

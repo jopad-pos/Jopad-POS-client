@@ -15,8 +15,10 @@ import {
   ShoppingCart,
   Crown,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useBranch, Branch } from "@/contexts/BranchContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface BranchStats extends Branch {
   todayRevenue: number;
@@ -342,9 +344,16 @@ function DeleteConfirm({
 
 export default function BranchesPage() {
   const { refreshBranches } = useBranch();
+  const { profile } = useAuth();
+  const router = useRouter();
   const [branches, setBranches] = useState<BranchStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  // Branch management is owner-only — bounce staff (e.g. Managers) back to the dashboard
+  useEffect(() => {
+    if (profile && profile.role !== "client") router.replace("/dashboard");
+  }, [profile, router]);
 
   const [showCreate, setShowCreate] = useState(false);
   const [editTarget, setEditTarget] = useState<BranchStats | null>(null);

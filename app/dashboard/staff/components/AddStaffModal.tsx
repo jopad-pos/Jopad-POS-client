@@ -6,6 +6,7 @@ import { apiRequest, ApiError } from "@/lib/api";
 import { ROLES } from "./types";
 import { ModalOverlay, FormField, inputCls } from "./shared";
 import { useBranch } from "@/contexts/BranchContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   onClose: () => void;
@@ -14,6 +15,10 @@ interface Props {
 
 export default function AddStaffModal({ onClose, onCreated }: Props) {
   const { branches } = useBranch();
+  const { profile } = useAuth();
+  // Managers (staff) may only add staff for their own branch and may not create Managers
+  const isManager = profile?.role === "staff";
+  const roleOptions = isManager ? ROLES.filter((r) => r !== "Manager") : ROLES;
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -98,7 +103,7 @@ export default function AddStaffModal({ onClose, onCreated }: Props) {
               className={inputCls}
             >
               <option value="">Select role...</option>
-              {ROLES.map((r) => (
+              {roleOptions.map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>
@@ -106,7 +111,7 @@ export default function AddStaffModal({ onClose, onCreated }: Props) {
             </select>
           </FormField>
 
-          {branches.length > 0 && (
+          {!isManager && branches.length > 0 && (
             <FormField label="Branch">
               <select
                 value={form.branchId}

@@ -5,6 +5,7 @@ import { apiRequest, ApiError } from "@/lib/api";
 import { StaffMember, StaffRole, ROLES } from "./types";
 import { ModalOverlay, FormField, inputCls } from "./shared";
 import { useBranch } from "@/contexts/BranchContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   staff: StaffMember;
@@ -14,6 +15,10 @@ interface Props {
 
 export default function EditStaffModal({ staff, onClose, onUpdated }: Props) {
   const { branches } = useBranch();
+  const { profile } = useAuth();
+  // Managers (staff) may not assign the Manager role or move staff between branches
+  const isManager = profile?.role === "staff";
+  const roleOptions = isManager ? ROLES.filter((r) => r !== "Manager") : ROLES;
 
   const currentBranchId =
     staff.branchId && typeof staff.branchId === "object"
@@ -96,7 +101,7 @@ export default function EditStaffModal({ staff, onClose, onUpdated }: Props) {
               className={inputCls}
             >
               <option value="">No role assigned</option>
-              {ROLES.map((r) => (
+              {roleOptions.map((r) => (
                 <option key={r} value={r}>
                   {r}
                 </option>
@@ -104,7 +109,7 @@ export default function EditStaffModal({ staff, onClose, onUpdated }: Props) {
             </select>
           </FormField>
 
-          {branches.length > 0 && (
+          {!isManager && branches.length > 0 && (
             <FormField label="Branch">
               <select
                 value={form.branchId}
