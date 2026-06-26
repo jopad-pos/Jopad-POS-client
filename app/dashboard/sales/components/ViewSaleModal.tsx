@@ -9,6 +9,7 @@ import { ModalOverlay } from "./shared";
 interface Props {
   sale: Sale;
   onClose: () => void;
+  onEdit?: () => void;
 }
 
 const DATE_FMT: Intl.DateTimeFormatOptions = {
