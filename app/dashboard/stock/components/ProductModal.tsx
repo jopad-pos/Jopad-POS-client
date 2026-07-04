@@ -3,24 +3,28 @@
 import { useState } from "react";
 import { X, Plus } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
-import { Product, ProductFormState, emptyForm } from "./types";
+import { Product, ProductFormState, CategoryRef, SupplierRef, UNIT_OPTIONS, emptyForm } from "./types";
 import { ModalOverlay, FormField, inputClass } from "./shared";
 import { useBranch } from "@/contexts/BranchContext";
 
 interface Props {
   product: Product | null;
-  categories: string[];
+  categories: CategoryRef[];
+  suppliers: SupplierRef[];
   onClose: () => void;
   onSaved: (p: Product) => void;
-  onAddCategory: (name: string) => Promise<void>;
+  onAddCategory: (name: string) => Promise<CategoryRef>;
+  onAddSupplier: (name: string) => Promise<SupplierRef>;
 }
 
 export default function ProductModal({
   product,
   categories,
+  suppliers,
   onClose,
   onSaved,
   onAddCategory,
+  onAddSupplier,
 }: Props) {
   const isEdit = !!product;
   const { selectedBranchId } = useBranch();
@@ -28,14 +32,20 @@ export default function ProductModal({
     product
       ? {
           name: product.name,
-          category: product.category,
+          categoryId: product.categoryId?._id || "",
+          supplierId: product.supplierId?._id || "",
           sku: product.sku || "",
           qty: String(product.qty),
           minQty: String(product.minQty),
+          reorderQty: String(product.reorderQty ?? ""),
+          unit: product.unit || "pcs",
           buyPrice: String(product.buyPrice),
           sellPrice: String(product.sellPrice),
+          taxRate: String(product.taxRate ?? ""),
           barcode: product.barcode || "",
           description: product.description || "",
+          expiryDate: product.expiryDate ? product.expiryDate.slice(0, 10) : "",
+          batchNumber: product.batchNumber || "",
         }
       : emptyForm()
   );
@@ -47,6 +57,12 @@ export default function ProductModal({
   const [newCatName, setNewCatName] = useState("");
   const [addCatLoading, setAddCatLoading] = useState(false);
   const [addCatError, setAddCatError] = useState("");
+
+  // Add-supplier inline state
+  const [showNewSup, setShowNewSup] = useState(false);
+  const [newSupName, setNewSupName] = useState("");
+  const [addSupLoading, setAddSupLoading] = useState(false);
+  const [addSupError, setAddSupError] = useState("");
 
   const set =
     (key: keyof ProductFormState) =>
@@ -62,8 +78,8 @@ export default function ProductModal({
     setAddCatLoading(true);
     setAddCatError("");
     try {
-      await onAddCategory(newCatName.trim());
-      setForm((f) => ({ ...f, category: newCatName.trim() }));
+      const created = await onAddCategory(newCatName.trim());
+      setForm((f) => ({ ...f, categoryId: created._id }));
       setNewCatName("");
       setShowNewCat(false);
     } catch (err) {
@@ -81,6 +97,30 @@ export default function ProductModal({
     setAddCatError("");
   };
 
+  const handleAddNewSup = async () => {
+    if (!newSupName.trim()) return;
+    setAddSupLoading(true);
+    setAddSupError("");
+    try {
+      const created = await onAddSupplier(newSupName.trim());
+      setForm((f) => ({ ...f, supplierId: created._id }));
+      setNewSupName("");
+      setShowNewSup(false);
+    } catch (err) {
+      setAddSupError(
+        err instanceof ApiError ? err.message : "Failed to add supplier"
+      );
+    } finally {
+      setAddSupLoading(false);
+    }
+  };
+
+  const cancelNewSup = () => {
+    setShowNewSup(false);
+    setNewSupName("");
+    setAddSupError("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) {
@@ -92,14 +132,20 @@ export default function ProductModal({
     try {
       const body = {
         name: form.name.trim(),
-        category: form.category.trim(),
+        categoryId: form.categoryId || null,
+        supplierId: form.supplierId || null,
         sku: form.sku.trim() || undefined,
         qty: Number(form.qty) || 0,
         minQty: Number(form.minQty) || 0,
+        reorderQty: Number(form.reorderQty) || 0,
+        unit: form.unit,
         buyPrice: Number(form.buyPrice) || 0,
         sellPrice: Number(form.sellPrice) || 0,
+        taxRate: Number(form.taxRate) || 0,
         barcode: form.barcode.trim() || undefined,
         description: form.description.trim(),
+        expiryDate: form.expiryDate || null,
+        batchNumber: form.batchNumber.trim(),
         ...(!isEdit && { branchId: selectedBranchId || undefined }),
       };
       const saved = isEdit
@@ -156,13 +202,13 @@ export default function ProductModal({
                 <div className="flex items-center gap-1.5">
                   <select
                     className={`${inputClass} flex-1`}
-                    value={form.category}
-                    onChange={set("category")}
+                    value={form.categoryId}
+                    onChange={set("categoryId")}
                   >
                     <option value="">— Select category —</option>
                     {categories.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
+                      <option key={c._id} value={c._id}>
+                        {c.name}
                       </option>
                     ))}
                   </select>
@@ -216,6 +262,75 @@ export default function ProductModal({
                 )}
               </div>
             </FormField>
+
+            <FormField label="Supplier">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-1.5">
+                  <select
+                    className={`${inputClass} flex-1`}
+                    value={form.supplierId}
+                    onChange={set("supplierId")}
+                  >
+                    <option value="">— Select supplier —</option>
+                    {suppliers.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setShowNewSup((v) => !v)}
+                    title="Add new supplier"
+                    className="p-1.5 rounded-md border border-slate-200 bg-slate-50 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition flex-shrink-0"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {showNewSup && (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        autoFocus
+                        value={newSupName}
+                        onChange={(e) => setNewSupName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            handleAddNewSup();
+                          }
+                          if (e.key === "Escape") cancelNewSup();
+                        }}
+                        placeholder="New supplier name"
+                        className={`${inputClass} flex-1`}
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddNewSup}
+                        disabled={addSupLoading || !newSupName.trim()}
+                        className="text-[12px] px-2.5 py-1.5 rounded-md bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60 transition flex-shrink-0"
+                      >
+                        {addSupLoading ? "…" : "Add"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={cancelNewSup}
+                        className="p-1.5 rounded-md border border-slate-200 text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition flex-shrink-0"
+                      >
+                        <X className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                    {addSupError && (
+                      <p className="text-[11px] text-red-500">{addSupError}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            </FormField>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <FormField label="SKU">
               <input
                 className={inputClass}
@@ -223,6 +338,19 @@ export default function ProductModal({
                 onChange={set("sku")}
                 placeholder="e.g. GRC-001"
               />
+            </FormField>
+            <FormField label="Unit">
+              <select
+                className={inputClass}
+                value={form.unit}
+                onChange={set("unit")}
+              >
+                {UNIT_OPTIONS.map((u) => (
+                  <option key={u} value={u}>
+                    {u}
+                  </option>
+                ))}
+              </select>
             </FormField>
           </div>
 
@@ -244,7 +372,7 @@ export default function ProductModal({
                 </p>
               )}
             </FormField>
-            <FormField label="Min Qty (Reorder)">
+            <FormField label="Min Qty (Alert Threshold)">
               <input
                 className={inputClass}
                 type="number"
@@ -255,6 +383,17 @@ export default function ProductModal({
               />
             </FormField>
           </div>
+
+          <FormField label="Reorder Qty (Restock Amount)">
+            <input
+              className={inputClass}
+              type="number"
+              min="0"
+              value={form.reorderQty}
+              onChange={set("reorderQty")}
+              placeholder="0"
+            />
+          </FormField>
 
           <div className="grid grid-cols-2 gap-3">
             <FormField label="Buy Price (UGX)">
@@ -279,6 +418,18 @@ export default function ProductModal({
             </FormField>
           </div>
 
+          <FormField label="Tax Rate (%)">
+            <input
+              className={inputClass}
+              type="number"
+              min="0"
+              max="100"
+              value={form.taxRate}
+              onChange={set("taxRate")}
+              placeholder="0"
+            />
+          </FormField>
+
           <FormField label="Barcode">
             <input
               className={inputClass}
@@ -287,6 +438,25 @@ export default function ProductModal({
               placeholder="Scan or enter barcode"
             />
           </FormField>
+
+          <div className="grid grid-cols-2 gap-3">
+            <FormField label="Expiry Date">
+              <input
+                className={inputClass}
+                type="date"
+                value={form.expiryDate}
+                onChange={set("expiryDate")}
+              />
+            </FormField>
+            <FormField label="Batch Number">
+              <input
+                className={inputClass}
+                value={form.batchNumber}
+                onChange={set("batchNumber")}
+                placeholder="e.g. B-2026-014"
+              />
+            </FormField>
+          </div>
 
           <FormField label="Description">
             <textarea

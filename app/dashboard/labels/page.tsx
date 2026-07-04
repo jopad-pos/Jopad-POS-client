@@ -16,7 +16,7 @@ import { apiRequest, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import PlanGate from "@/components/PlanGate";
 import { useBranchQuery } from "@/contexts/BranchContext";
-import { Product } from "../stock/components/types";
+import { Product, CategoryRef } from "../stock/components/types";
 import { LabelSize, printLabels } from "./printLabels";
 
 const SIZE_LABELS: Record<LabelSize, string> = {
@@ -63,12 +63,12 @@ export default function LabelsPage() {
     setLoading(true);
     Promise.all([
       apiRequest<{ items: Product[] }>(`/api/products?limit=2000${branchQuery}`),
-      apiRequest<string[]>("/api/categories"),
+      apiRequest<CategoryRef[]>("/api/categories"),
     ])
       .then(([productsRes, catsRes]) => {
         if (cancelled) return;
         setProducts(productsRes.items);
-        setCategories(catsRes);
+        setCategories(catsRes.map((c) => c.name));
         setError("");
       })
       .catch((err) => {

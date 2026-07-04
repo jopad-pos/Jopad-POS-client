@@ -12,7 +12,7 @@ import {
   ShoppingCart,
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
-import { Product, statusConfig, exportCSV } from "./types";
+import { Product, statusConfig, exportCSV, CategoryRef } from "./types";
 
 // ─── Row Menu ─────────────────────────────────────────────────────────────────
 
@@ -95,7 +95,7 @@ interface Props {
   lowStockOnly: boolean;
   onLowStockToggle: () => void;
   onAddClick: () => void;
-  onAddCategory: (name: string) => Promise<void>;
+  onAddCategory: (name: string) => Promise<CategoryRef>;
   onEdit: (p: Product) => void;
   onAdjust: (p: Product) => void;
   onHistory: (p: Product) => void;

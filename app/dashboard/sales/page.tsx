@@ -1,18 +1,32 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useMemo } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { apiRequest, ApiError } from "@/lib/api";
+import { useAuth } from "@/contexts/AuthContext";
 import { useBranchQuery } from "@/contexts/BranchContext";
-import { Sale, isToday } from "./components/types";
+import { Sale, SaleType, isToday } from "./components/types";
 import SalesTable from "./components/SalesTable";
 import ViewSaleModal from "./components/ViewSaleModal";
 import CreateSaleModal from "./components/CreateSaleModal";
 import DeleteConfirm from "./components/DeleteConfirm";
+import { printReceipt } from "./components/printReceipt";
 
 const PAGE_SIZE = 15;
 
 export default function SalesPage() {
+  return (
+    <Suspense fallback={null}>
+      <SalesPageInner />
+    </Suspense>
+  );
+}
+
+function SalesPageInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const branchQuery = useBranchQuery();
+  const { profile } = useAuth();
   const [sales, setSales] = useState<Sale[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -21,13 +35,14 @@ export default function SalesPage() {
   const [search, setSearch] = useState("");
   const [methodFilter, setMethodFilter] = useState("All Methods");
   const [cashierFilter, setCashierFilter] = useState("All Cashiers");
+  const [typeFilter, setTypeFilter] = useState<SaleType | "All Types">("All Types");
   const [todayOnly, setTodayOnly] = useState(false);
 
   // Pagination
   const [page, setPage] = useState(1);
 
   // Modals
-  const [showCreate, setShowCreate] = useState(false);
+  const [showCreate, setShowCreate] = useState(() => searchParams.get("new") === "true");
   const [viewSale, setViewSale] = useState<Sale | null>(null);
   const [deleteSale, setDeleteSale] = useState<Sale | null>(null);
 
@@ -47,6 +62,13 @@ export default function SalesPage() {
     return () => { cancelled = true; };
   }, [branchQuery]);
 
+  // Strip the query param used to auto-open the create modal (e.g. overview's "New Sale" button)
+  useEffect(() => {
+    if (searchParams.get("new") === "true") {
+      router.replace("/dashboard/sales");
+    }
+  }, [searchParams, router]);
+
   // Derived cashier list for the filter dropdown
   const cashiers = useMemo(
     () => Array.from(new Set(sales.map((s) => s.cashier).filter(Boolean))).sort(),
@@ -59,6 +81,7 @@ export default function SalesPage() {
       if (todayOnly && !isToday(s.date)) return false;
       if (methodFilter !== "All Methods" && s.method !== methodFilter) return false;
       if (cashierFilter !== "All Cashiers" && s.cashier !== cashierFilter) return false;
+      if (typeFilter !== "All Types" && !(s.saleTypes || []).includes(typeFilter)) return false;
       if (search) {
         const q = search.toLowerCase();
         if (
@@ -70,7 +93,7 @@ export default function SalesPage() {
       }
       return true;
     });
-  }, [sales, search, methodFilter, cashierFilter, todayOnly]);
+  }, [sales, search, methodFilter, cashierFilter, typeFilter, todayOnly]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -80,6 +103,7 @@ export default function SalesPage() {
   function handleSearch(v: string) { setSearch(v); setPage(1); }
   function handleMethod(v: string) { setMethodFilter(v); setPage(1); }
   function handleCashier(v: string) { setCashierFilter(v); setPage(1); }
+  function handleType(v: SaleType | "All Types") { setTypeFilter(v); setPage(1); }
   function handleTodayToggle() { setTodayOnly((v) => !v); setPage(1); }
 
   // Modal callbacks
@@ -92,6 +116,15 @@ export default function SalesPage() {
     setSales((prev) => prev.filter((s) => s._id !== id));
     setDeleteSale(null);
   };
+
+  async function handlePrint(sale: Sale) {
+    try {
+      const full = await apiRequest<Sale>(`/api/sales/${sale._id}`);
+      printReceipt(full, profile);
+    } catch {
+      printReceipt(sale, profile);
+    }
+  }
 
   // Summary stats — always from today's full data regardless of current filter
   const todaySales = useMemo(() => sales.filter((s) => isToday(s.date)), [sales]);
@@ -159,6 +192,8 @@ export default function SalesPage() {
         cashierFilter={cashierFilter}
         onCashierFilterChange={handleCashier}
         cashiers={cashiers}
+        typeFilter={typeFilter}
+        onTypeFilterChange={handleType}
         todayOnly={todayOnly}
         onTodayToggle={handleTodayToggle}
         page={safePage}
@@ -168,6 +203,7 @@ export default function SalesPage() {
         onPageSelect={setPage}
         onNew={() => setShowCreate(true)}
         onView={setViewSale}
+        onPrint={handlePrint}
         onDelete={setDeleteSale}
       />
 

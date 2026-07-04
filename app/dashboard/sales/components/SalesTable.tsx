@@ -11,7 +11,7 @@ import {
   ChevronRight,
   Plus,
 } from "lucide-react";
-import { Sale, methodStyles, formatSaleTime } from "./types";
+import { Sale, SaleType, methodStyles, saleTypeLabels, formatSaleTime } from "./types";
 
 // ─── Pagination helpers ────────────────────────────────────────────────────────
 
@@ -27,9 +27,11 @@ function pageRange(current: number, total: number): (number | "…")[] {
 
 function RowMenu({
   onView,
+  onPrint,
   onDelete,
 }: {
   onView: () => void;
+  onPrint: () => void;
   onDelete: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -66,6 +68,7 @@ function RowMenu({
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
           {item("View Details", onView)}
+          {item("Print Receipt", onPrint)}
           <div className="border-t border-slate-100 my-1" />
           {item("Delete", onDelete, true)}
         </div>
@@ -91,6 +94,8 @@ interface Props {
   cashierFilter: string;
   onCashierFilterChange: (v: string) => void;
   cashiers: string[];
+  typeFilter: SaleType | "All Types";
+  onTypeFilterChange: (v: SaleType | "All Types") => void;
   todayOnly: boolean;
   onTodayToggle: () => void;
   page: number;
@@ -100,6 +105,7 @@ interface Props {
   onPageSelect: (p: number) => void;
   onNew: () => void;
   onView: (s: Sale) => void;
+  onPrint: (s: Sale) => void;
   onDelete: (s: Sale) => void;
 }
 
@@ -116,6 +122,8 @@ export default function SalesTable({
   cashierFilter,
   onCashierFilterChange,
   cashiers,
+  typeFilter,
+  onTypeFilterChange,
   todayOnly,
   onTodayToggle,
   page,
@@ -125,6 +133,7 @@ export default function SalesTable({
   onPageSelect,
   onNew,
   onView,
+  onPrint,
   onDelete,
 }: Props) {
   const pages = pageRange(page, totalPages);
@@ -180,6 +189,21 @@ export default function SalesTable({
             ))}
           </select>
 
+          <select
+            value={typeFilter}
+            onChange={(e) => onTypeFilterChange(e.target.value as SaleType | "All Types")}
+            className="text-[12px] bg-slate-50 border border-slate-200 rounded-md text-slate-600 px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+          >
+            <option value="All Types">All Types</option>
+            {(Object.keys(saleTypeLabels) as SaleType[]).map((t) => (
+              <option key={t} value={t}>
+                {saleTypeLabels[t]}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 flex-wrap ml-auto">
           <button className="flex items-center gap-1.5 text-[12px] text-slate-600 border border-slate-200 bg-slate-50 hover:bg-white px-2.5 py-1.5 rounded-md transition-colors">
             <Download className="w-3.5 h-3.5 text-slate-400" />
             Export
@@ -298,6 +322,7 @@ export default function SalesTable({
                     <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                       <RowMenu
                         onView={() => onView(sale)}
+                        onPrint={() => onPrint(sale)}
                         onDelete={() => onDelete(sale)}
                       />
                     </div>
