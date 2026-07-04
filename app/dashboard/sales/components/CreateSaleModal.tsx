@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Plus, Trash2 } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { Sale, PayMethod } from "./types";
@@ -15,6 +15,13 @@ interface Product {
   qty: number;
 }
 
+interface Service {
+  _id: string;
+  name: string;
+  category: string;
+  price: number;
+}
+
 interface CustomerOption {
   _id: string;
   name: string;
@@ -27,6 +34,7 @@ interface StaffOption {
 
 interface LineItemDraft {
   productId: string;
+  serviceId: string;
   name: string;
   qty: string;
   unitPrice: string;
@@ -48,6 +56,7 @@ function nowLocalDatetime(): string {
 
 const blankItem = (): LineItemDraft => ({
   productId: "",
+  serviceId: "",
   name: "",
   qty: "1",
   unitPrice: "",
@@ -59,6 +68,7 @@ const rowInput =
 export default function CreateSaleModal({ onClose, onCreated }: Props) {
   const { selectedBranchId } = useBranch();
   const [products, setProducts] = useState<Product[]>([]);
+  const [services, setServices] = useState<Service[]>([]);
   const [customers, setCustomers] = useState<CustomerOption[]>([]);
   const [staffOptions, setStaffOptions] = useState<StaffOption[]>([]);
   const [customer, setCustomer] = useState("");
@@ -68,10 +78,16 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
   const [lineItems, setLineItems] = useState<LineItemDraft[]>([blankItem()]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  // One key per modal instance: retrying after a network error re-sends the
+  // same key, so the API records the sale at most once.
+  const idempotencyKeyRef = useRef(crypto.randomUUID());
 
   useEffect(() => {
     apiRequest<{ items: Product[] }>("/api/products?limit=500")
       .then((res) => setProducts(res.items.filter((p) => p.qty > 0)))
+      .catch(() => {});
+    apiRequest<{ items: Service[] }>("/api/services?limit=500")
+      .then((res) => setServices(res.items))
       .catch(() => {});
     apiRequest<{ items: CustomerOption[] }>("/api/customers?limit=500&status=Active")
       .then((res) => setCustomers(res.items))
@@ -91,8 +107,14 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
     0
   );
 
-  function selectProduct(idx: number, productId: string) {
-    const product = products.find((p) => p._id === productId);
+  // Option values are prefixed ("p:" product, "s:" service) so both can share one picker
+  function selectItem(idx: number, value: string) {
+    const product = value.startsWith("p:")
+      ? products.find((p) => p._id === value.slice(2))
+      : undefined;
+    const service = value.startsWith("s:")
+      ? services.find((s) => s._id === value.slice(2))
+      : undefined;
     setLineItems((prev) =>
       prev.map((li, i) =>
         i !== idx
@@ -101,10 +123,19 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
           ? {
               ...li,
               productId: product._id,
+              serviceId: "",
               name: product.name,
               unitPrice: String(product.sellPrice),
             }
-          : { ...li, productId: "", name: "", unitPrice: "" }
+          : service
+          ? {
+              ...li,
+              productId: "",
+              serviceId: service._id,
+              name: service.name,
+              unitPrice: String(service.price),
+            }
+          : { ...li, productId: "", serviceId: "", name: "", unitPrice: "" }
       )
     );
   }
@@ -125,9 +156,9 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    const validItems = lineItems.filter((li) => li.productId);
+    const validItems = lineItems.filter((li) => li.productId || li.serviceId);
     if (validItems.length === 0) {
-      setError("Select at least one product.");
+      setError("Select at least one product or service.");
       return;
     }
     setSaving(true);
@@ -141,8 +172,10 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
           method,
           date: new Date(date).toISOString(),
           branchId: selectedBranchId || undefined,
+          idempotencyKey: idempotencyKeyRef.current,
           lineItems: validItems.map((li) => ({
-            productId: li.productId,
+            productId: li.productId || undefined,
+            serviceId: li.serviceId || undefined,
             name: li.name,
             qty: Math.max(1, Number(li.qty) || 1),
             unitPrice: Math.max(0, Number(li.unitPrice) || 0),
@@ -254,7 +287,7 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
                 {/* Column headers */}
                 <div className="grid grid-cols-[1fr_52px_100px_76px_28px] gap-2 bg-slate-50 border-b border-slate-200 px-3 py-1.5">
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide">
-                    Product
+                    Item
                   </span>
                   <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide text-center">
                     Qty
@@ -280,21 +313,36 @@ export default function CreateSaleModal({ onClose, onCreated }: Props) {
                       >
                         <select
                           className={rowInput}
-                          value={li.productId}
-                          onChange={(e) => selectProduct(idx, e.target.value)}
+                          value={
+                            li.productId
+                              ? `p:${li.productId}`
+                              : li.serviceId
+                              ? `s:${li.serviceId}`
+                              : ""
+                          }
+                          onChange={(e) => selectItem(idx, e.target.value)}
                         >
-                          <option value="">Select product…</option>
+                          <option value="">Select item…</option>
                           {categories.map((cat) => (
                             <optgroup key={cat} label={cat}>
                               {products
                                 .filter((p) => p.category === cat)
                                 .map((p) => (
-                                  <option key={p._id} value={p._id}>
+                                  <option key={p._id} value={`p:${p._id}`}>
                                     {p.name}
                                   </option>
                                 ))}
                             </optgroup>
                           ))}
+                          {services.length > 0 && (
+                            <optgroup label="Services">
+                              {services.map((s) => (
+                                <option key={s._id} value={`s:${s._id}`}>
+                                  {s.name}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
                         </select>
                         <input
                           className={`${rowInput} text-center`}

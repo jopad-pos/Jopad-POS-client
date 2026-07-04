@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useBranchQuery } from "@/contexts/BranchContext";
-import { Product, StatsData } from "./components/types";
+import { Product, StatsData, CategoryRef, SupplierRef } from "./components/types";
 import { printLabels } from "../labels/printLabels";
 import StockTable from "./components/StockTable";
 import ProductModal from "./components/ProductModal";
@@ -15,7 +15,8 @@ import PurchaseModal from "../purchases/components/PurchaseModal";
 export default function StockPage() {
   const branchQuery = useBranchQuery();
   const [products, setProducts] = useState<Product[]>([]);
-  const [categories, setCategories] = useState<string[]>([]);
+  const [categories, setCategories] = useState<CategoryRef[]>([]);
+  const [suppliers, setSuppliers] = useState<SupplierRef[]>([]);
   const [stats, setStats] = useState<StatsData>({
     total: 0,
     totalValue: 0,
@@ -42,13 +43,15 @@ export default function StockPage() {
     let cancelled = false;
     Promise.all([
       apiRequest<{ items: Product[] }>(`/api/products?limit=1000${branchQuery}`),
-      apiRequest<string[]>("/api/categories"),
+      apiRequest<CategoryRef[]>("/api/categories"),
+      apiRequest<{ items: SupplierRef[] }>(`/api/suppliers?limit=1000${branchQuery}`),
       apiRequest<StatsData>(`/api/products/stats?1=1${branchQuery}`),
     ])
-      .then(([productsRes, catsRes, statsRes]) => {
+      .then(([productsRes, catsRes, suppliersRes, statsRes]) => {
         if (cancelled) return;
         setProducts(productsRes.items);
         setCategories(catsRes);
+        setSuppliers(suppliersRes.items);
         setStats(statsRes);
         setError("");
       })
@@ -64,23 +67,35 @@ export default function StockPage() {
 
   const refreshMeta = () =>
     Promise.all([
-      apiRequest<string[]>("/api/categories"),
+      apiRequest<CategoryRef[]>("/api/categories"),
+      apiRequest<{ items: SupplierRef[] }>("/api/suppliers?limit=1000"),
       apiRequest<StatsData>("/api/products/stats"),
     ])
-      .then(([cats, st]) => {
+      .then(([cats, suppliersRes, st]) => {
         setCategories(cats);
+        setSuppliers(suppliersRes.items);
         setStats(st);
       })
       .catch(() => {});
 
-  const handleAddCategory = async (name: string) => {
-    await apiRequest<{ name: string }>("/api/categories", {
+  const handleAddCategory = async (name: string): Promise<CategoryRef> => {
+    const created = await apiRequest<CategoryRef>("/api/categories", {
       method: "POST",
       body: JSON.stringify({ name }),
     });
     setCategories((prev) =>
-      [...new Set([...prev, name])].sort((a, b) => a.localeCompare(b))
+      [...prev, created].sort((a, b) => a.name.localeCompare(b.name))
     );
+    return created;
+  };
+
+  const handleAddSupplier = async (name: string): Promise<SupplierRef> => {
+    const created = await apiRequest<SupplierRef>("/api/suppliers", {
+      method: "POST",
+      body: JSON.stringify({ name }),
+    });
+    setSuppliers((prev) => [...prev, created].sort((a, b) => a.name.localeCompare(b.name)));
+    return created;
   };
 
   // Client-side filtering
@@ -170,7 +185,7 @@ export default function StockPage() {
       <StockTable
         products={products}
         filtered={filtered}
-        categories={categories}
+        categories={categories.map((c) => c.name)}
         loading={loading}
         error={error}
         search={search}
@@ -194,18 +209,22 @@ export default function StockPage() {
         <ProductModal
           product={null}
           categories={categories}
+          suppliers={suppliers}
           onClose={() => setAddOpen(false)}
           onSaved={handleProductSaved}
           onAddCategory={handleAddCategory}
+          onAddSupplier={handleAddSupplier}
         />
       )}
       {editProduct && (
         <ProductModal
           product={editProduct}
           categories={categories}
+          suppliers={suppliers}
           onClose={() => setEditProduct(null)}
           onSaved={handleProductSaved}
           onAddCategory={handleAddCategory}
+          onAddSupplier={handleAddSupplier}
         />
       )}
       {adjustProduct && (

@@ -1,4 +1,5 @@
 export type PayMethod = "Cash" | "Mobile Money" | "Card" | "Credit";
+export type SaleType = "stock" | "service" | "hotel";
 
 export interface SaleLineItem {
   productId?: string;
@@ -17,7 +18,14 @@ export interface Sale {
   method: PayMethod;
   date: string;
   lineItems?: SaleLineItem[];
+  saleTypes?: SaleType[];
 }
+
+export const saleTypeLabels: Record<SaleType, string> = {
+  stock: "Stock",
+  service: "Services",
+  hotel: "Hotel",
+};
 
 export const methodStyles: Record<PayMethod, string> = {
   Cash: "bg-slate-100 text-slate-600",

@@ -9,9 +9,11 @@ import {
   ChevronDown,
   MapPin,
   Check,
+  Menu,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranch } from "@/contexts/BranchContext";
+import { useSidebar } from "@/contexts/SidebarContext";
 import { useRef, useState, useEffect } from "react";
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
@@ -154,10 +156,19 @@ export default function Topbar() {
   const pathname = usePathname();
   const page = pageMeta[pathname] ?? { title: "Jopad POS", subtitle: "" };
   const { user, logout } = useAuth();
+  const { toggle } = useSidebar();
   const initials = user ? getInitials(user.email) : "…";
 
   return (
-    <header className="h-[52px] bg-white border-b border-slate-200 flex items-center px-5 gap-4 flex-shrink-0">
+    <header className="h-[52px] bg-white border-b border-slate-200 flex items-center px-3 sm:px-5 gap-2 sm:gap-4 flex-shrink-0">
+      <button
+        onClick={toggle}
+        aria-label="Open menu"
+        className="lg:hidden p-1.5 -ml-1 rounded-md text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors shrink-0"
+      >
+        <Menu className="w-5 h-5" />
+      </button>
+
       <div className="flex-1 min-w-0">
         <h1 className="text-[13px] font-semibold text-slate-900 leading-none truncate">
           {page.title}

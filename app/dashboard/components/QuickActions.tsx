@@ -15,7 +15,7 @@ export function QuickActions({ loading, error, lowStockCount, onRefresh }: Quick
     <>
       <div className="flex items-center gap-2.5 flex-wrap">
         <Link
-          href="/dashboard/sales/new"
+          href="/dashboard/sales?new=true"
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-[12px] font-medium px-3 py-2 rounded-lg transition-colors"
         >
           <Plus className="w-3.5 h-3.5" />

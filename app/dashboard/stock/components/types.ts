@@ -1,16 +1,36 @@
 export type StockStatus = "OK" | "Low" | "Critical" | "Out";
 
+export const UNIT_OPTIONS = ["pcs", "kg", "g", "litre", "ml", "box", "carton", "pack", "dozen"];
+
+export interface CategoryRef {
+  _id: string;
+  name: string;
+}
+
+export interface SupplierRef {
+  _id: string;
+  name: string;
+  ref?: string;
+}
+
 export interface Product {
   _id: string;
   name: string;
-  category: string;
+  category: string; // populated category name, for display
+  categoryId?: CategoryRef | null;
+  supplierId?: SupplierRef | null;
   sku?: string;
   qty: number;
   minQty: number;
+  reorderQty: number;
+  unit: string;
   buyPrice: number;
   sellPrice: number;
+  taxRate: number;
   barcode?: string;
   description?: string;
+  expiryDate?: string | null;
+  batchNumber?: string;
   status: StockStatus;
 }
 
@@ -34,26 +54,38 @@ export interface Movement {
 
 export interface ProductFormState {
   name: string;
-  category: string;
+  categoryId: string;
+  supplierId: string;
   sku: string;
   qty: string;
   minQty: string;
+  reorderQty: string;
+  unit: string;
   buyPrice: string;
   sellPrice: string;
+  taxRate: string;
   barcode: string;
   description: string;
+  expiryDate: string;
+  batchNumber: string;
 }
 
 export const emptyForm = (): ProductFormState => ({
   name: "",
-  category: "",
+  categoryId: "",
+  supplierId: "",
   sku: "",
   qty: "",
   minQty: "",
+  reorderQty: "",
+  unit: "pcs",
   buyPrice: "",
   sellPrice: "",
+  taxRate: "",
   barcode: "",
   description: "",
+  expiryDate: "",
+  batchNumber: "",
 });
 
 export const statusConfig: Record<StockStatus, { label: string; class: string; dot: string }> = {
@@ -72,15 +104,36 @@ export const movementTypeLabel: Record<string, string> = {
 };
 
 export function exportCSV(products: Product[]) {
-  const header = ["Name", "SKU", "Category", "Qty", "Min Qty", "Buy Price", "Sell Price", "Status"];
+  const header = [
+    "Name",
+    "SKU",
+    "Category",
+    "Supplier",
+    "Qty",
+    "Unit",
+    "Min Qty",
+    "Reorder Qty",
+    "Buy Price",
+    "Sell Price",
+    "Tax Rate",
+    "Expiry Date",
+    "Batch Number",
+    "Status",
+  ];
   const rows = products.map((p) => [
     `"${p.name}"`,
     p.sku || "",
     `"${p.category}"`,
+    `"${p.supplierId?.name || ""}"`,
     p.qty,
+    p.unit,
     p.minQty,
+    p.reorderQty,
     p.buyPrice,
     p.sellPrice,
+    p.taxRate,
+    p.expiryDate ? new Date(p.expiryDate).toLocaleDateString() : "",
+    p.batchNumber || "",
     p.status,
   ]);
   const csv = [header, ...rows].map((r) => r.join(",")).join("\n");

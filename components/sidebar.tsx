@@ -3,11 +3,13 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import {
   LayoutDashboard,
   ShoppingCart,
   Package,
   ArrowDownToLine,
+  ConciergeBell,
   Users,
   Truck,
   UserCog,
@@ -17,12 +19,15 @@ import {
   BookOpen,
   GitBranch,
   Tag,
+  BedDouble,
   Settings,
   LogOut,
   ChevronDown,
   Lock,
+  X,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSidebar } from "@/contexts/SidebarContext";
 import {
   DEFAULT_STAFF_PERMISSIONS,
   PLAN_GATED_FEATURES,
@@ -50,6 +55,12 @@ const navGroups: { group: string; items: NavItem[] }[] = [
       { label: "Sales", href: "/dashboard/sales", icon: ShoppingCart, featureKey: "sales" },
       { label: "Stock", href: "/dashboard/stock", icon: Package, featureKey: "stock" },
       {
+        label: "Services",
+        href: "/dashboard/services",
+        icon: ConciergeBell,
+        featureKey: "services",
+      },
+      {
         label: "Purchases & Expenses",
         href: "/dashboard/purchases",
         icon: ArrowDownToLine,
@@ -70,6 +81,18 @@ const navGroups: { group: string; items: NavItem[] }[] = [
     group: "Insights",
     items: [
       { label: "Reports", href: "/dashboard/reports", icon: BarChart3, featureKey: "reports" },
+    ],
+  },
+  {
+    group: "Hospitality",
+    items: [
+      {
+        label: "Hotel",
+        href: "/dashboard/hotel",
+        icon: BedDouble,
+        badge: "Enterprise",
+        featureKey: "hotel",
+      },
     ],
   },
   {
@@ -120,6 +143,13 @@ function getInitials(name: string): string {
 export default function Sidebar() {
   const pathname = usePathname();
   const { profile, logout } = useAuth();
+  const { isOpen, close } = useSidebar();
+
+  // Close the mobile drawer whenever the route changes
+  useEffect(() => {
+    close();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const isActive = (href: string) => pathname === href;
 
@@ -155,18 +185,39 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-55 bg-white border-r border-slate-200 flex flex-col h-screen fixed left-0 top-0 bottom-0 z-40">
-      {/* Business header */}
-      <div className="px-4 py-4 border-b border-slate-200">
-        <div className="flex items-center gap-2.5 mb-2.5">
-          <Image
-            src="/logos/jopad-pos-logo.png"
-            alt="Jopad POS"
-            width={140}
-            height={140}
-            className="shrink-0"
-          />
-        </div>
+    <>
+      {/* Mobile backdrop */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/40 z-40 lg:hidden"
+          onClick={close}
+          aria-hidden="true"
+        />
+      )}
+
+      <aside
+        className={`w-55 bg-white border-r border-slate-200 flex flex-col h-screen fixed left-0 top-0 bottom-0 z-50 transition-transform duration-200 ease-in-out lg:translate-x-0 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        {/* Business header */}
+        <div className="px-4 py-4 border-b border-slate-200">
+          <div className="flex items-center justify-between gap-2.5 mb-2.5">
+            <Image
+              src="/logos/jopad-pos-logo.png"
+              alt="Jopad POS"
+              width={140}
+              height={140}
+              className="shrink-0"
+            />
+            <button
+              onClick={close}
+              aria-label="Close menu"
+              className="lg:hidden p-1 rounded-md text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         <button className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 rounded-md px-3 py-2 transition-colors group">
           <div className="text-left min-w-0">
             <p className="text-slate-900 text-[12px] font-semibold truncate leading-none">
@@ -266,6 +317,7 @@ export default function Sidebar() {
           </button>
         </div>
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
