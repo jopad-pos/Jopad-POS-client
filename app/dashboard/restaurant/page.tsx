@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBranchQuery } from "@/contexts/BranchContext";
@@ -152,6 +152,11 @@ function RestaurantDashboard() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // A table can be "occupied" purely from a seated reservation with no Order
+  // opened yet (reservations.js's /seat doesn't create one — staff opens the
+  // tab separately). Only an actual open order should offer "View tab".
+  const openOrderTableIds = useMemo(() => new Set(openOrders.map((o) => o.table)), [openOrders]);
 
   const cards = [
     { label: "Tables", value: tableStats.total, sub: `${tableStats.occupied} occupied` },
@@ -351,6 +356,7 @@ function RestaurantDashboard() {
       {tab === "tables" && (
         <TablesBoard
           tables={tables}
+          openOrderTableIds={openOrderTableIds}
           loading={loading}
           isOwner={isOwner}
           onAddTable={() => setAddTableOpen(true)}

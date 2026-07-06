@@ -3,13 +3,16 @@
 import { useState } from "react";
 import { X, PackageCheck } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
-import { Purchase, PurchaseStatus } from "./types";
+import { Purchase } from "./types";
 import { ModalOverlay, inputClass } from "./shared";
 
 interface ReceivedRow {
+  index: number;
   productId: string;
   name: string;
   orderedQty: number;
+  alreadyReceived: number;
+  remaining: number;
   receivedQty: string;
 }
 
@@ -21,26 +24,44 @@ interface Props {
 
 export default function ReceiveModal({ purchase, onClose, onReceived }: Props) {
   const [rows, setRows] = useState<ReceivedRow[]>(
-    (purchase.lineItems ?? []).map((li) => ({
-      productId: li.productId,
-      name: li.name,
-      orderedQty: li.qty,
-      receivedQty: String(li.qty),
-    }))
+    (purchase.lineItems ?? []).map((li, index) => {
+      const alreadyReceived = li.receivedQty || 0;
+      const remaining = Math.max(0, li.qty - alreadyReceived);
+      return {
+        index,
+        productId: li.productId,
+        name: li.name,
+        orderedQty: li.qty,
+        alreadyReceived,
+        remaining,
+        receivedQty: String(remaining),
+      };
+    })
   );
-  const [status, setStatus] = useState<PurchaseStatus>("Received");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
   const receiveAll = () =>
-    setRows((prev) => prev.map((r) => ({ ...r, receivedQty: String(r.orderedQty) })));
+    setRows((prev) => prev.map((r) => ({ ...r, receivedQty: String(r.remaining) })));
 
   const updateQty = (idx: number, value: string) =>
-    setRows((prev) => prev.map((r, i) => (i === idx ? { ...r, receivedQty: value } : r)));
+    setRows((prev) =>
+      prev.map((r, i) => {
+        if (i !== idx) return r;
+        const n = Number(value);
+        const clamped = value === "" ? "" : String(Math.max(0, Math.min(n, r.remaining)));
+        return { ...r, receivedQty: clamped };
+      })
+    );
+
+  const willBeFullyReceived = rows.every(
+    (r) => r.remaining === 0 || Number(r.receivedQty) >= r.remaining
+  );
 
   const handleConfirm = async () => {
     const receivedItems = rows
-      .map((r) => ({ productId: r.productId, qty: Number(r.receivedQty) }))
+      .filter((r) => r.remaining > 0)
+      .map((r) => ({ index: r.index, productId: r.productId, qty: Number(r.receivedQty) }))
       .filter((r) => r.productId && r.qty > 0);
 
     if (receivedItems.length === 0) {
@@ -53,7 +74,7 @@ export default function ReceiveModal({ purchase, onClose, onReceived }: Props) {
     try {
       const updated = await apiRequest<Purchase>(`/api/purchases/${purchase._id}/receive`, {
         method: "POST",
-        body: JSON.stringify({ receivedItems, status }),
+        body: JSON.stringify({ receivedItems }),
       });
       onReceived(updated);
     } catch (err) {
@@ -89,12 +110,12 @@ export default function ReceiveModal({ purchase, onClose, onReceived }: Props) {
 
           <div className="flex items-center justify-between">
             <p className="text-[12px] text-slate-500">
-              Adjust received quantities, then confirm to update stock.
+              Enter what actually arrived. Leftover quantities stay open so you can receive the rest later.
             </p>
             <button
               type="button"
               onClick={receiveAll}
-              className="text-[12px] text-blue-600 hover:text-blue-700 font-medium transition"
+              className="text-[12px] text-blue-600 hover:text-blue-700 font-medium transition whitespace-nowrap"
             >
               Receive All
             </button>
@@ -113,16 +134,30 @@ export default function ReceiveModal({ purchase, onClose, onReceived }: Props) {
               <tbody className="divide-y divide-slate-100">
                 {rows.map((row, idx) => (
                   <tr key={idx}>
-                    <td className="px-3 py-2 text-slate-700">{row.name}</td>
+                    <td className="px-3 py-2 text-slate-700">
+                      {row.name}
+                      {row.alreadyReceived > 0 && (
+                        <span className="block text-[10px] text-slate-400 mt-0.5">
+                          {row.remaining === 0
+                            ? "Fully received"
+                            : `${row.alreadyReceived} of ${row.orderedQty} already received`}
+                        </span>
+                      )}
+                    </td>
                     <td className="px-3 py-2 text-slate-500 tabular-nums">{row.orderedQty}</td>
                     <td className="px-3 py-2">
-                      <input
-                        className={`${inputClass} py-1.5 w-full`}
-                        type="number"
-                        min="0"
-                        value={row.receivedQty}
-                        onChange={(e) => updateQty(idx, e.target.value)}
-                      />
+                      {row.remaining === 0 ? (
+                        <span className="text-[11px] text-emerald-600 font-medium">Complete</span>
+                      ) : (
+                        <input
+                          className={`${inputClass} py-1.5 w-full`}
+                          type="number"
+                          min="0"
+                          max={row.remaining}
+                          value={row.receivedQty}
+                          onChange={(e) => updateQty(idx, e.target.value)}
+                        />
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -130,29 +165,17 @@ export default function ReceiveModal({ purchase, onClose, onReceived }: Props) {
             </table>
           </div>
 
-          {/* Status */}
-          <div>
-            <label className="block text-[11px] font-semibold text-slate-500 uppercase tracking-wide mb-1">
-              Mark Order As
-            </label>
-            <div className="flex gap-2">
-              {(["Received", "Partial"] as PurchaseStatus[]).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setStatus(s)}
-                  className={`px-3 py-1.5 text-[12px] rounded-md border font-medium transition ${
-                    status === s
-                      ? s === "Received"
-                        ? "bg-emerald-600 text-white border-emerald-600"
-                        : "bg-blue-600 text-white border-blue-600"
-                      : "border-slate-200 text-slate-600 hover:bg-slate-50"
-                  }`}
-                >
-                  {s}
-                </button>
-              ))}
-            </div>
+          {/* Auto-derived outcome */}
+          <div
+            className={`text-[12px] px-3 py-2 rounded-md border ${
+              willBeFullyReceived
+                ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                : "bg-blue-50 text-blue-700 border-blue-100"
+            }`}
+          >
+            This order will be marked{" "}
+            <span className="font-semibold">{willBeFullyReceived ? "Received" : "Partial"}</span>{" "}
+            based on the quantities entered.
           </div>
         </div>
 

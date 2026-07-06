@@ -3,7 +3,7 @@ export type KitchenStatus = "pending" | "preparing" | "ready" | "served";
 export type OrderStatus = "open" | "closed" | "cancelled";
 export type PayMethod = "Cash" | "Mobile Money" | "Card" | "Credit";
 export type ReservationType = "reservation" | "waitlist";
-export type ReservationStatus = "booked" | "waiting" | "seated" | "cancelled" | "no-show";
+export type ReservationStatus = "booked" | "waiting" | "seated" | "cancelled" | "no-show" | "completed";
 
 export interface RestaurantTable {
   _id: string;
@@ -208,4 +208,5 @@ export const RESERVATION_STATUS_STYLES: Record<ReservationStatus, string> = {
   seated: "bg-emerald-50 text-emerald-700 border-emerald-200",
   cancelled: "bg-red-50 text-red-600 border-red-200",
   "no-show": "bg-slate-100 text-slate-500 border-slate-200",
+  completed: "bg-slate-100 text-slate-500 border-slate-200",
 };

@@ -10,6 +10,7 @@ import {
   X,
   ChevronDown,
   ShoppingCart,
+  Clock,
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { Product, statusConfig, exportCSV, CategoryRef } from "./types";
@@ -102,6 +103,7 @@ interface Props {
   onDelete: (p: Product) => void;
   onPurchaseOrder: (p: Product) => void;
   onPrintLabel: (p: Product) => void;
+  pendingOrderProductIds: Set<string>;
 }
 
 export default function StockTable({
@@ -124,6 +126,7 @@ export default function StockTable({
   onDelete,
   onPurchaseOrder,
   onPrintLabel,
+  pendingOrderProductIds,
 }: Props) {
   const [addCatMode, setAddCatMode] = useState(false);
   const [newCatName, setNewCatName] = useState("");
@@ -360,14 +363,24 @@ export default function StockTable({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 justify-end">
                         {(p.status === "Low" || p.status === "Critical" || p.status === "Out") && (
-                          <button
-                            onClick={() => onPurchaseOrder(p)}
-                            title="Create purchase order"
-                            className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition whitespace-nowrap"
-                          >
-                            <ShoppingCart className="w-3 h-3" />
-                            Order
-                          </button>
+                          pendingOrderProductIds.has(p._id) ? (
+                            <span
+                              title="A purchase order for this item is pending"
+                              className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md bg-slate-100 text-slate-500 border border-slate-200 whitespace-nowrap"
+                            >
+                              <Clock className="w-3 h-3" />
+                              Order Placed
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => onPurchaseOrder(p)}
+                              title="Create purchase order"
+                              className="flex items-center gap-1 text-[11px] font-medium px-2 py-1 rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition whitespace-nowrap"
+                            >
+                              <ShoppingCart className="w-3 h-3" />
+                              Order
+                            </button>
+                          )
                         )}
                         <div className="opacity-0 group-hover:opacity-100 transition-opacity">
                           <RowMenu

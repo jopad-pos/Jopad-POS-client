@@ -5,6 +5,7 @@ export interface PurchaseLineItem {
   name: string;
   qty: number;
   buyPrice: number;
+  receivedQty?: number;
 }
 
 export interface Purchase {

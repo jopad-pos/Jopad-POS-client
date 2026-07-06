@@ -7,6 +7,7 @@ import { TABLE_STATUS_STYLES } from "./types";
 
 interface Props {
   tables: RestaurantTable[];
+  openOrderTableIds: Set<string>;
   loading: boolean;
   isOwner: boolean;
   onAddTable: () => void;
@@ -19,6 +20,7 @@ interface Props {
 
 export default function TablesBoard({
   tables,
+  openOrderTableIds,
   loading,
   isOwner,
   onAddTable,
@@ -60,8 +62,11 @@ export default function TablesBoard({
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3">
             {paged.map((table) => {
               const s = TABLE_STATUS_STYLES[table.status];
-              const isOccupied = table.status === "occupied";
               const needsCleaning = table.status === "needs-cleaning";
+              // A table can be "occupied" purely from a seated reservation with
+              // no Order opened yet — only an actual open order should block
+              // edits/deletes or offer "View tab" instead of "Open tab".
+              const hasOpenOrder = openOrderTableIds.has(table._id);
               return (
                 <div
                   key={table._id}
@@ -83,7 +88,7 @@ export default function TablesBoard({
                   </div>
 
                   <div className="flex items-center gap-1.5 mt-auto pt-1">
-                    {isOccupied ? (
+                    {hasOpenOrder ? (
                       <button
                         onClick={() => onViewTab(table)}
                         className="flex-1 text-[11px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded px-2 py-1.5"
@@ -116,8 +121,8 @@ export default function TablesBoard({
                         </button>
                         <button
                           onClick={() => onDeleteTable(table)}
-                          disabled={isOccupied}
-                          title={isOccupied ? "Close the tab first" : "Delete table"}
+                          disabled={hasOpenOrder}
+                          title={hasOpenOrder ? "Close the tab first" : "Delete table"}
                           className="p-1.5 rounded text-slate-400 hover:text-red-500 hover:bg-white/60 disabled:opacity-30 disabled:cursor-not-allowed"
                         >
                           <Trash2 className="w-3.5 h-3.5" />

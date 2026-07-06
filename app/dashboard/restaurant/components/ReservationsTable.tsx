@@ -11,6 +11,7 @@ const FILTERS: { key: string; label: string }[] = [
   { key: "booked", label: "Booked" },
   { key: "waiting", label: "Waiting" },
   { key: "seated", label: "Seated" },
+  { key: "completed", label: "Completed" },
   { key: "cancelled", label: "Cancelled" },
   { key: "no-show", label: "No-show" },
 ];
@@ -21,6 +22,7 @@ const STATUS_LABEL: Record<ReservationStatus, string> = {
   seated: "Seated",
   cancelled: "Cancelled",
   "no-show": "No-show",
+  completed: "Completed",
 };
 
 function RowMenu({

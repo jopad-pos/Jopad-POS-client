@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useBranchQuery } from "@/contexts/BranchContext";
-import { Product, StatsData, CategoryRef, SupplierRef } from "./components/types";
+import { Product, StatsData, CategoryRef, SupplierRef, PendingPurchaseRef } from "./components/types";
 import { printLabels } from "../labels/printLabels";
 import StockTable from "./components/StockTable";
 import ProductModal from "./components/ProductModal";
@@ -11,6 +11,17 @@ import AdjustModal from "./components/AdjustModal";
 import HistoryModal from "./components/HistoryModal";
 import DeleteConfirm from "./components/DeleteConfirm";
 import PurchaseModal from "../purchases/components/PurchaseModal";
+
+function pendingProductIdSet(purchases: PendingPurchaseRef[]): Set<string> {
+  const ids = new Set<string>();
+  for (const purchase of purchases) {
+    if (purchase.status === "Received") continue;
+    for (const li of purchase.lineItems ?? []) {
+      if (li.productId) ids.add(String(li.productId));
+    }
+  }
+  return ids;
+}
 
 export default function StockPage() {
   const branchQuery = useBranchQuery();
@@ -38,6 +49,7 @@ export default function StockPage() {
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
   const [purchaseProduct, setPurchaseProduct] = useState<Product | null>(null);
+  const [pendingOrderProductIds, setPendingOrderProductIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     let cancelled = false;
@@ -46,13 +58,15 @@ export default function StockPage() {
       apiRequest<CategoryRef[]>("/api/categories"),
       apiRequest<{ items: SupplierRef[] }>(`/api/suppliers?limit=1000${branchQuery}`),
       apiRequest<StatsData>(`/api/products/stats?1=1${branchQuery}`),
+      apiRequest<{ items: PendingPurchaseRef[] }>(`/api/purchases?limit=1000${branchQuery}`),
     ])
-      .then(([productsRes, catsRes, suppliersRes, statsRes]) => {
+      .then(([productsRes, catsRes, suppliersRes, statsRes, purchasesRes]) => {
         if (cancelled) return;
         setProducts(productsRes.items);
         setCategories(catsRes);
         setSuppliers(suppliersRes.items);
         setStats(statsRes);
+        setPendingOrderProductIds(pendingProductIdSet(purchasesRes.items));
         setError("");
       })
       .catch((err) => {
@@ -202,6 +216,7 @@ export default function StockPage() {
         onDelete={setDeleteProduct}
         onPurchaseOrder={setPurchaseProduct}
       onPrintLabel={(p) => printLabels([p], { size: "medium", copies: 1, showName: true, showPrice: true, showSku: true })}
+      pendingOrderProductIds={pendingOrderProductIds}
       />
 
       {/* Modals */}
@@ -254,7 +269,14 @@ export default function StockPage() {
             buyPrice: String(purchaseProduct.buyPrice),
           }]}
           onClose={() => setPurchaseProduct(null)}
-          onSaved={() => setPurchaseProduct(null)}
+          onSaved={(saved) => {
+            setPendingOrderProductIds((prev) => {
+              const next = new Set(prev);
+              for (const ids of pendingProductIdSet([saved])) next.add(ids);
+              return next;
+            });
+            setPurchaseProduct(null);
+          }}
         />
       )}
     </div>

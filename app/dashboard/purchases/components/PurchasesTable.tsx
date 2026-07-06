@@ -18,11 +18,13 @@ const PAGE_SIZE = 10;
 function RowMenu({
   onView,
   onReceive,
+  receiveLabel = "Receive Stock",
   onEdit,
   onDelete,
 }: {
   onView: () => void;
   onReceive?: () => void;
+  receiveLabel?: string;
   onEdit: () => void;
   onDelete: () => void;
 }) {
@@ -65,7 +67,7 @@ function RowMenu({
       {open && (
         <div className="absolute right-0 z-20 mt-1 w-40 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
           {item("View Details", onView)}
-          {onReceive && item("Receive Stock", onReceive)}
+          {onReceive && item(receiveLabel, onReceive)}
           {item("Edit", onEdit)}
           <div className="border-t border-slate-100 my-1" />
           {item("Delete", onDelete, true)}
@@ -297,6 +299,7 @@ export default function PurchasesTable({
                         <RowMenu
                           onView={() => onView(p)}
                           onReceive={p.status !== "Received" ? () => onReceive(p) : undefined}
+                          receiveLabel={p.status === "Partial" ? "Receive Remaining" : "Receive Stock"}
                           onEdit={() => onEdit(p)}
                           onDelete={() => onDelete(p)}
                         />

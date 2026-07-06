@@ -41,6 +41,11 @@ export interface StatsData {
   lowOrCritical: number;
 }
 
+export interface PendingPurchaseRef {
+  status: "Received" | "Pending" | "Partial";
+  lineItems?: { productId?: string | null }[];
+}
+
 export interface Movement {
   _id: string;
   type: "in" | "out" | "adjustment" | "sale" | "purchase";
