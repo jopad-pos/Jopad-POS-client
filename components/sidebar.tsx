@@ -20,6 +20,7 @@ import {
   GitBranch,
   Tag,
   BedDouble,
+  UtensilsCrossed,
   Settings,
   LogOut,
   ChevronDown,
@@ -92,6 +93,18 @@ const navGroups: { group: string; items: NavItem[] }[] = [
         icon: BedDouble,
         badge: "Enterprise",
         featureKey: "hotel",
+      },
+    ],
+  },
+  {
+    group: "Restaurant",
+    items: [
+      {
+        label: "Restaurant",
+        href: "/dashboard/restaurant",
+        icon: UtensilsCrossed,
+        badge: "Enterprise",
+        featureKey: "restaurant",
       },
     ],
   },

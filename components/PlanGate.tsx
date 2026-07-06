@@ -18,6 +18,7 @@ const PLAN_HIGHLIGHTS: Record<PlanTier, string[]> = {
     "Manufacturing module & Bill of Materials",
     "Field sales mobile app",
     "Real-time field sync",
+    "Restaurant management with kitchen display & table service",
     "Dedicated account support",
   ],
 };

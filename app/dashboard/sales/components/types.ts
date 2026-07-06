@@ -1,8 +1,10 @@
 export type PayMethod = "Cash" | "Mobile Money" | "Card" | "Credit";
-export type SaleType = "stock" | "service" | "hotel";
+export type SaleType = "stock" | "service" | "restaurant" | "hotel";
 
 export interface SaleLineItem {
   productId?: string;
+  serviceId?: string;
+  menuItemId?: string;
   name: string;
   qty: number;
   unitPrice: number;
@@ -24,6 +26,7 @@ export interface Sale {
 export const saleTypeLabels: Record<SaleType, string> = {
   stock: "Stock",
   service: "Services",
+  restaurant: "Restaurant",
   hotel: "Hotel",
 };
 

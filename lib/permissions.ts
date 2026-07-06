@@ -21,6 +21,7 @@ export const FEATURES = [
   { key: "accounting", label: "Accounting" },
   { key: "labels", label: "Labels & Barcodes" },
   { key: "hotel", label: "Hotel" },
+  { key: "restaurant", label: "Restaurant" },
   { key: "staff", label: "Staff Mgmt" },
 ] as const;
 
@@ -35,10 +36,11 @@ export const PLAN_GATED_FEATURES: Partial<Record<FeatureKey, PlanTier>> = {
   accounting: "Plus",
   labels: "Plus",
   hotel: "Enterprise",
+  restaurant: "Enterprise",
 };
 
 export const DEFAULT_STAFF_PERMISSIONS: Record<StaffRole, FeatureKey[]> = {
-  Manager: ["sales", "stock", "services", "purchases", "customers", "suppliers", "reports", "invoices", "quotations", "accounting", "labels", "hotel", "staff"],
+  Manager: ["sales", "stock", "services", "purchases", "customers", "suppliers", "reports", "invoices", "quotations", "accounting", "labels", "hotel", "restaurant", "staff"],
   Cashier: ["sales", "customers"],
   "Stock Manager": ["stock", "purchases", "suppliers", "labels"],
   Accountant: ["sales", "reports", "invoices", "quotations", "accounting"],
