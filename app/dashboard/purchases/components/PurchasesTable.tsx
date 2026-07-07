@@ -227,21 +227,10 @@ export default function PurchasesTable({
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                {[
-                  { label: "Order Ref",   right: false },
-                  { label: "Supplier",    right: false },
-                  { label: "Description", right: false },
-                  { label: "Items",       right: true  },
-                  { label: "Amount",      right: true  },
-                  { label: "Status",      right: false },
-                  { label: "Date",        right: false },
-                  { label: "",            right: false },
-                ].map(({ label, right }) => (
+                {["Order Ref", "Supplier", "Description", "Items", "Amount", "Status", "Date", ""].map((label) => (
                   <th
                     key={label}
-                    className={`px-4 py-3 text-[12px] font-semibold text-black uppercase tracking-wider whitespace-nowrap ${
-                      right ? "text-right" : "text-left"
-                    }`}
+                    className="px-4 py-3 text-[12px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                   >
                     {label}
                   </th>
@@ -271,12 +260,12 @@ export default function PurchasesTable({
                         {p.description}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[12px] text-slate-600 tabular-nums">
                         {p.items}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] font-semibold text-slate-900 tabular-nums whitespace-nowrap">
                         UGX {p.amount.toLocaleString()}
                       </span>

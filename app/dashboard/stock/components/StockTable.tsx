@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { ApiError } from "@/lib/api";
 import { Product, statusConfig, exportCSV, CategoryRef } from "./types";
+import { Paginator, usePagination } from "../../components/Paginator";
+
+const PAGE_SIZE = 15;
 
 // ─── Row Menu ─────────────────────────────────────────────────────────────────
 
@@ -128,6 +131,7 @@ export default function StockTable({
   onPrintLabel,
   pendingOrderProductIds,
 }: Props) {
+  const { page, setPage, totalPages, paged } = usePagination(filtered, PAGE_SIZE);
   const [addCatMode, setAddCatMode] = useState(false);
   const [newCatName, setNewCatName] = useState("");
   const [addCatLoading, setAddCatLoading] = useState(false);
@@ -285,7 +289,7 @@ export default function StockTable({
                 ].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-3 text-[12px] font-semibold text-black uppercase tracking-wider whitespace-nowrap text-left"
+                    className="px-4 py-3 text-[12px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                   >
                     {h}
                   </th>
@@ -293,7 +297,7 @@ export default function StockTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filtered.map((p) => {
+              {paged.map((p) => {
                 const s = statusConfig[p.status];
                 return (
                   <tr
@@ -402,6 +406,12 @@ export default function StockTable({
       </div>
 
       {/* Footer */}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        total={filtered.length}
+        setPage={setPage}
+      />
       <div className="flex items-center justify-between px-4 py-3 border-t border-slate-100">
         <p className="text-[12px] text-slate-400">
           {filtered.length}

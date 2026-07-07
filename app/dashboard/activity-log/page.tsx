@@ -29,6 +29,14 @@ const ACTION_LABELS: Record<string, string> = {
   "staff.permissions_updated": "Permissions updated",
   "branch.deleted": "Branch deleted",
   "sale.deleted": "Sale deleted",
+  "customer.deleted": "Customer deleted",
+  "supplier.deleted": "Supplier deleted",
+  "expense.deleted": "Expense deleted",
+  "purchase.deleted": "Purchase deleted",
+  "invoice.deleted": "Invoice deleted",
+  "quotation.deleted": "Quotation deleted",
+  "order.voided": "Order voided",
+  "booking.cancelled": "Booking cancelled",
 };
 
 const ACTION_STYLES: Record<string, string> = {
@@ -41,6 +49,14 @@ const ACTION_STYLES: Record<string, string> = {
   "staff.permissions_updated": "bg-purple-50 text-purple-700",
   "branch.deleted": "bg-red-50 text-red-600",
   "sale.deleted": "bg-red-50 text-red-600",
+  "customer.deleted": "bg-red-50 text-red-600",
+  "supplier.deleted": "bg-red-50 text-red-600",
+  "expense.deleted": "bg-red-50 text-red-600",
+  "purchase.deleted": "bg-red-50 text-red-600",
+  "invoice.deleted": "bg-red-50 text-red-600",
+  "quotation.deleted": "bg-red-50 text-red-600",
+  "order.voided": "bg-amber-50 text-amber-700",
+  "booking.cancelled": "bg-amber-50 text-amber-700",
 };
 
 function describeEvent(log: AuditLogItem): string {
@@ -64,6 +80,22 @@ function describeEvent(log: AuditLogItem): string {
       return `Deleted branch "${log.targetLabel}"`;
     case "sale.deleted":
       return `Deleted sale ${log.targetLabel}`;
+    case "customer.deleted":
+      return `Deleted customer ${log.targetLabel}`;
+    case "supplier.deleted":
+      return `Deleted supplier ${log.targetLabel}`;
+    case "expense.deleted":
+      return `Deleted expense ${log.targetLabel}`;
+    case "purchase.deleted":
+      return `Deleted purchase ${log.targetLabel}`;
+    case "invoice.deleted":
+      return `Deleted invoice ${log.targetLabel}`;
+    case "quotation.deleted":
+      return `Deleted quotation ${log.targetLabel}`;
+    case "order.voided":
+      return `Voided order ${log.targetLabel}`;
+    case "booking.cancelled":
+      return `Cancelled stay ${log.targetLabel}`;
     default:
       return log.action;
   }

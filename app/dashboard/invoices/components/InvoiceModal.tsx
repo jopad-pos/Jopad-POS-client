@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, Plus, Trash2, UserPlus } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
+import { useBranch } from "@/contexts/BranchContext";
 import {
   Invoice,
   InvoiceStatus,
@@ -94,6 +95,7 @@ const rowInput =
 // ── Component ─────────────────────────────────────────────────────────────────
 
 export default function InvoiceModal({ invoice, onClose, onSaved }: Props) {
+  const { selectedBranchId } = useBranch();
   const isEdit = !!invoice;
 
   const [form, setForm] = useState<FormState>(
@@ -221,6 +223,7 @@ export default function InvoiceModal({ invoice, onClose, onSaved }: Props) {
         dueDate: form.dueDate || null,
         status: form.status,
         notes: form.notes.trim(),
+        ...(isEdit ? {} : { branchId: selectedBranchId }),
         lineItems: validLines.map((li) => ({
           productId: li.productId || null,
           name: li.name.trim(),

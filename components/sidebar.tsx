@@ -107,6 +107,8 @@ const navGroups: { group: string; items: NavItem[] }[] = [
         label: "Branches",
         href: "/dashboard/branches",
         icon: GitBranch,
+        badge: "Enterprise",
+        featureKey: "branches",
         ownerOnly: true,
       },
     ],

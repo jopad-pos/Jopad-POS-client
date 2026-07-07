@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Plus, Search, MoreHorizontal, FileText, Download } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranchQuery } from "@/contexts/BranchContext";
 import PlanGate from "@/components/PlanGate";
 import { usePagination, Paginator } from "../components/Paginator";
 import { printInvoice } from "./components/printInvoice";
@@ -22,6 +23,7 @@ const PAGE_SIZE = 15;
 
 export default function InvoicesPage() {
   const { profile } = useAuth();
+  const branchQuery = useBranchQuery();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [stats, setStats] = useState<InvoiceStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -41,8 +43,8 @@ export default function InvoicesPage() {
   function load() {
     setLoading(true);
     Promise.all([
-      apiRequest<{ items: Invoice[] }>("/api/invoices?limit=500"),
-      apiRequest<InvoiceStats>("/api/invoices/stats"),
+      apiRequest<{ items: Invoice[] }>(`/api/invoices?limit=500${branchQuery}`),
+      apiRequest<InvoiceStats>(`/api/invoices/stats?1=1${branchQuery}`),
     ])
       .then(([list, s]) => {
         setInvoices(list.items);
@@ -57,7 +59,8 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchQuery]);
 
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
@@ -205,7 +208,7 @@ export default function InvoicesPage() {
                 {["Invoice", "Customer", "Date", "Due Date", "Items", "Amount", "Status", ""].map((h) => (
                   <th
                     key={h}
-                    className={`px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left ${["Items", "Amount"].includes(h) ? "text-right" : ""}`}
+                    className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                   >
                     {h}
                   </th>
@@ -257,10 +260,10 @@ export default function InvoicesPage() {
                         {fmtDate(inv.dueDate)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[12px] text-slate-600 tabular-nums">{inv.items}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] font-semibold text-slate-900 tabular-nums whitespace-nowrap">
                         UGX {inv.amount.toLocaleString()}
                       </span>

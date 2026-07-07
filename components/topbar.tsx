@@ -3,8 +3,6 @@
 import { usePathname } from "next/navigation";
 import {
   Bell,
-  Search,
-  RefreshCw,
   LogOut,
   ChevronDown,
   MapPin,
@@ -18,7 +16,7 @@ import { apiRequest } from "@/lib/api";
 import { useRef, useState, useEffect } from "react";
 
 const pageMeta: Record<string, { title: string; subtitle: string }> = {
-  "/dashboard": { title: "Overview", subtitle: "Today, Tuesday 13 May 2026" },
+  "/dashboard": { title: "Overview", subtitle: "" }, // subtitle: today's date, set at render
   "/dashboard/sales": {
     title: "Sales",
     subtitle: "All transactions and revenue",
@@ -26,6 +24,10 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   "/dashboard/stock": {
     title: "Stock",
     subtitle: "Inventory levels and product catalogue",
+  },
+  "/dashboard/services": {
+    title: "Services",
+    subtitle: "Service catalogue and pricing",
   },
   "/dashboard/purchases": {
     title: "Purchases & Expenses",
@@ -46,6 +48,22 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
   "/dashboard/invoices": {
     title: "Invoices",
     subtitle: "Quotes and customer invoices",
+  },
+  "/dashboard/quotations": {
+    title: "Quotations",
+    subtitle: "Customer quotes and estimates",
+  },
+  "/dashboard/labels": {
+    title: "Labels & Barcodes",
+    subtitle: "Generate product labels and barcodes",
+  },
+  "/dashboard/hotel": {
+    title: "Hotel",
+    subtitle: "Rooms, check-ins and stays",
+  },
+  "/dashboard/restaurant": {
+    title: "Restaurant",
+    subtitle: "Tables, menu, orders and reservations",
   },
   "/dashboard/accounting": {
     title: "Accounting",
@@ -276,6 +294,8 @@ function BranchSelector() {
 
   // Only business owners can switch branches
   if (profile?.role !== "client") return null;
+  // Multi-branch is plan-gated — hide the switcher when the plan lacks it
+  if (profile?.planFeatures && !profile.planFeatures.includes("branches")) return null;
   // Don't render if client only has one branch (or none yet)
   if (branches.length <= 1) return null;
 
@@ -339,7 +359,16 @@ function BranchSelector() {
 
 export default function Topbar() {
   const pathname = usePathname();
-  const page = pageMeta[pathname] ?? { title: "Jopad POS", subtitle: "" };
+  let page = pageMeta[pathname] ?? { title: "Jopad POS", subtitle: "" };
+  if (pathname === "/dashboard") {
+    const today = new Date().toLocaleDateString("en-GB", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    });
+    page = { ...page, subtitle: `Today, ${today}` };
+  }
   const { user, logout } = useAuth();
   const { toggle } = useSidebar();
   const initials = user ? getInitials(user.email) : "…";
@@ -367,23 +396,6 @@ export default function Topbar() {
 
       <div className="flex items-center gap-2">
         <BranchSelector />
-
-        {/* <div className="relative hidden md:block">
-          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Search..."
-            className="pl-8 pr-4 py-1.5 text-[12px] bg-slate-50 border border-slate-200 rounded-md text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white w-44 transition"
-          />
-        </div> */}
-
-        <button
-          aria-label="Sync status"
-          title="Last synced: 2 min ago"
-          className="p-1.5 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-        </button>
 
         <NotificationBell />
 

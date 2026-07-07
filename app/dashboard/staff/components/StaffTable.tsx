@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, Plus, MoreHorizontal, Pencil, Trash2, UserCheck, UserX, KeyRound } from "lucide-react";
 import { StaffMember, ROLES, roleConfig, initials, formatJoined } from "./types";
+import { Paginator, usePagination } from "../../components/Paginator";
+
+const PAGE_SIZE = 15;
 
 // ── Row action menu ───────────────────────────────────────────────────────────
 
@@ -117,6 +120,7 @@ export default function StaffTable({
   onToggleActive,
   onDelete,
 }: Props) {
+  const { page, setPage, totalPages, paged } = usePagination(items, PAGE_SIZE);
   return (
     <div className="bg-white border border-slate-200 rounded-lg flex flex-col flex-1 min-h-0">
       {/* Toolbar */}
@@ -214,7 +218,7 @@ export default function StaffTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {items.map((s) => (
+              {paged.map((s) => (
                 <tr
                   key={s._id}
                   className="hover:bg-slate-100 transition-colors group"
@@ -315,6 +319,12 @@ export default function StaffTable({
       </div>
 
       {/* Footer */}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        total={items.length}
+        setPage={setPage}
+      />
       <div className="px-4 py-3 border-t border-slate-100 shrink-0">
         <p className="text-[12px] text-slate-400">
           {loading

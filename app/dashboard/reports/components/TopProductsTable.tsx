@@ -51,11 +51,7 @@ export function TopProductsTable({
               {COLS.map((h) => (
                 <th
                   key={h}
-                  className={`px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap ${
-                    ["Units Sold", "Revenue", "Est. Margin"].includes(h)
-                      ? "text-right"
-                      : "text-left"
-                  }`}
+                  className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                 >
                   {h}
                 </th>
@@ -104,17 +100,17 @@ export function TopProductsTable({
                         {p.name}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-left">
                       <span className="text-[13px] text-slate-700 tabular-nums">
                         {p.qty.toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-left">
                       <span className="text-[13px] font-semibold text-slate-900 tabular-nums whitespace-nowrap">
                         {fmtAmt(p.revenue, currency)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3 text-left">
                       <span className="text-[12px] text-emerald-600 tabular-nums">
                         {p.margin}%
                       </span>

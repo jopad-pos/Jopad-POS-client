@@ -223,20 +223,10 @@ export default function ExpensesTable({
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100">
-                {[
-                  { label: "Ref",         right: false },
-                  { label: "Category",    right: false },
-                  { label: "Description", right: false },
-                  { label: "Amount",      right: true  },
-                  { label: "Date",        right: false },
-                  { label: "Recorded by", right: false },
-                  { label: "",            right: false },
-                ].map(({ label, right }) => (
+                {["Ref", "Category", "Description", "Amount", "Date", "Recorded by", ""].map((label) => (
                   <th
                     key={label}
-                    className={`px-4 py-3 text-[12px] font-semibold text-black uppercase tracking-wider whitespace-nowrap ${
-                      right ? "text-right" : "text-left"
-                    }`}
+                    className="px-4 py-3 text-[12px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                   >
                     {label}
                   </th>
@@ -264,7 +254,7 @@ export default function ExpensesTable({
                   <td className="px-4 py-3">
                     <span className="text-[13px] text-slate-700">{e.description}</span>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3">
                     <span className="text-[13px] font-semibold text-slate-900 tabular-nums whitespace-nowrap">
                       UGX {e.amount.toLocaleString()}
                     </span>
