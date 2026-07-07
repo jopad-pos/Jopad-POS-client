@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Search, MoreHorizontal } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, MoreHorizontal, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Paginator, usePagination } from "../../components/Paginator";
 import type { Booking, BookingStatus } from "./types";
@@ -23,6 +23,45 @@ const STATUS_LABEL: Record<BookingStatus, string> = {
   "checked-out": "Checked out",
   cancelled: "Cancelled",
 };
+
+type SortKey = "ref" | "guestName" | "roomNumber" | "checkInAt" | "checkOutAt";
+
+function SortHeader({
+  label,
+  sortKey,
+  activeKey,
+  direction,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  activeKey: SortKey | null;
+  direction: "asc" | "desc";
+  onSort: (key: SortKey) => void;
+}) {
+  const active = activeKey === sortKey;
+  return (
+    <th className="text-left font-semibold px-4 py-2.5">
+      <button
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-0.5 uppercase tracking-wider transition-colors ${
+          active ? "text-slate-600" : "text-slate-400 hover:text-slate-600"
+        }`}
+      >
+        {label}
+        {active ? (
+          direction === "asc" ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )
+        ) : (
+          <ChevronsUpDown className="w-3 h-3 text-slate-300" />
+        )}
+      </button>
+    </th>
+  );
+}
 
 function RowMenu({ onCheckOut, onCancel }: { onCheckOut: () => void; onCancel: () => void }) {
   const [open, setOpen] = useState(false);
@@ -91,6 +130,18 @@ export default function BookingsTable({
   const { profile } = useAuth();
   const currency = profile?.currency ?? "UGX";
 
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
+
   const filtered = bookings.filter((b) => {
     if (statusFilter !== "All" && b.status !== statusFilter) return false;
     if (search) {
@@ -105,7 +156,24 @@ export default function BookingsTable({
     return true;
   });
 
-  const { page, setPage, totalPages, paged } = usePagination(filtered, 10);
+  const sorted = useMemo(() => {
+    if (!sortKey) return filtered;
+    const list = [...filtered];
+    list.sort((a, b) => {
+      let cmp: number;
+      if (sortKey === "checkInAt" || sortKey === "checkOutAt") {
+        const aTime = a[sortKey] ? new Date(a[sortKey] as string).getTime() : 0;
+        const bTime = b[sortKey] ? new Date(b[sortKey] as string).getTime() : 0;
+        cmp = aTime - bTime;
+      } else {
+        cmp = a[sortKey].localeCompare(b[sortKey], undefined, { sensitivity: "base" });
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [filtered, sortKey, sortDir]);
+
+  const { page, setPage, totalPages, paged } = usePagination(sorted, 10);
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg flex flex-col flex-1 min-h-0">
@@ -143,11 +211,11 @@ export default function BookingsTable({
         <table className="w-full text-left">
           <thead className="sticky top-0 bg-slate-50 z-10">
             <tr className="text-[10px] uppercase tracking-wider text-slate-400">
-              <th className="text-left font-semibold px-4 py-2.5">Ref</th>
-              <th className="text-left font-semibold px-4 py-2.5">Guest</th>
-              <th className="text-left font-semibold px-4 py-2.5">Room</th>
-              <th className="text-left font-semibold px-4 py-2.5">Check-in</th>
-              <th className="text-left font-semibold px-4 py-2.5">Check-out</th>
+              <SortHeader label="Ref" sortKey="ref" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Guest" sortKey="guestName" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Room" sortKey="roomNumber" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Check-in" sortKey="checkInAt" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Check-out" sortKey="checkOutAt" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
               <th className="text-left font-semibold px-4 py-2.5">Charge</th>
               <th className="text-left font-semibold px-4 py-2.5">Status</th>
               <th className="text-left font-semibold px-4 py-2.5"></th>
@@ -201,7 +269,7 @@ export default function BookingsTable({
         </table>
       </div>
 
-      <Paginator page={page} totalPages={totalPages} total={filtered.length} setPage={setPage} />
+      <Paginator page={page} totalPages={totalPages} total={sorted.length} setPage={setPage} />
     </div>
   );
 }

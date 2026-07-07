@@ -23,6 +23,7 @@ export function printInvoice(invoice: Invoice, profile: BusinessProfile | null) 
   const businessEmail = profile?.storeEmail ?? "";
   const businessPhone = profile?.phone ?? "";
   const businessLocation = profile?.location ?? "";
+  const logoUrl = profile?.logoUrl ?? "";
 
   const lineItems = invoice.lineItems ?? [];
   const lineRows = lineItems
@@ -55,6 +56,7 @@ export function printInvoice(invoice: Invoice, profile: BusinessProfile | null) 
   .page { padding: 48px; max-width: 800px; margin: 0 auto; }
 
   .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 40px; }
+  .logo { max-height: 56px; max-width: 200px; margin-bottom: 10px; display: block; }
   .biz-name { font-size: 22px; font-weight: 700; color: #0f172a; }
   .biz-info { font-size: 11px; color: #64748b; margin-top: 5px; line-height: 1.7; }
 
@@ -102,6 +104,7 @@ export function printInvoice(invoice: Invoice, profile: BusinessProfile | null) 
 
   <div class="header">
     <div>
+      ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="${businessName}">` : ""}
       <div class="biz-name">${businessName}</div>
       ${contactLines ? `<div class="biz-info">${contactLines}</div>` : ""}
     </div>

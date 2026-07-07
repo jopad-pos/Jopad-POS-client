@@ -17,6 +17,7 @@ export function printReceipt(sale: Sale, profile: BusinessProfile | null) {
   const businessName = profile?.businessName ?? "Business";
   const businessPhone = profile?.phone ?? "";
   const businessLocation = profile?.location ?? "";
+  const logoUrl = profile?.logoUrl ?? "";
 
   const lineItems = sale.lineItems ?? [];
   const lineRows = lineItems
@@ -41,6 +42,7 @@ export function printReceipt(sale: Sale, profile: BusinessProfile | null) {
   body { font-family: "Courier New", monospace; font-size: 12px; color: #111; background: #fff; }
   .page { width: 280px; margin: 0 auto; padding: 16px; }
   .center { text-align: center; }
+  .logo { max-height: 48px; max-width: 160px; margin: 0 auto 6px; display: block; }
   .biz-name { font-size: 15px; font-weight: 700; }
   .biz-info { font-size: 10px; color: #444; margin-top: 3px; line-height: 1.5; }
   .divider { border: none; border-top: 1px dashed #999; margin: 10px 0; }
@@ -65,6 +67,7 @@ export function printReceipt(sale: Sale, profile: BusinessProfile | null) {
 <body>
 <div class="page">
   <div class="center">
+    ${logoUrl ? `<img class="logo" src="${logoUrl}" alt="${businessName}">` : ""}
     <div class="biz-name">${businessName}</div>
     ${contactLines ? `<div class="biz-info">${contactLines}</div>` : ""}
   </div>

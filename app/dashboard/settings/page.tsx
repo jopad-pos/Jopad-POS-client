@@ -45,6 +45,7 @@ interface UserData {
   email: string;
   role: string;
   businessName?: string;
+  logoUrl?: string | null;
   storeEmail?: string;
   location?: string;
   phone?: string;
@@ -312,6 +313,8 @@ export default function SettingsPage() {
 
   const [storeSaving, setStoreSaving] = useState(false);
   const [storeResult, setStoreResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoResult, setLogoResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [receiptSaving, setReceiptSaving] = useState(false);
   const [receiptResult, setReceiptResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [accountSaving, setAccountSaving] = useState(false);
@@ -363,6 +366,56 @@ export default function SettingsPage() {
       setStoreResult({ ok: false, msg: err instanceof Error ? err.message : "Save failed." });
     } finally {
       setStoreSaving(false);
+    }
+  }
+
+  // ── Logo handlers ────────────────────────────────────────────────────────
+
+  const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+  const LOGO_ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (!LOGO_ACCEPTED_TYPES.includes(file.type)) {
+      setLogoResult({ ok: false, msg: "Logo must be a PNG, JPEG, WEBP, or SVG image." });
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setLogoResult({ ok: false, msg: "Logo must be under 2MB." });
+      return;
+    }
+
+    setLogoUploading(true);
+    setLogoResult(null);
+    try {
+      const form = new FormData();
+      form.append("logo", file);
+      const updated = await apiRequest<UserData>("/api/auth/logo", { method: "POST", body: form });
+      setUserData(updated);
+      await refreshProfile();
+      setLogoResult({ ok: true, msg: "Logo updated." });
+    } catch (err) {
+      setLogoResult({ ok: false, msg: err instanceof Error ? err.message : "Upload failed." });
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  async function handleLogoRemove() {
+    setLogoUploading(true);
+    setLogoResult(null);
+    try {
+      const updated = await apiRequest<UserData>("/api/auth/logo", { method: "DELETE" });
+      setUserData(updated);
+      await refreshProfile();
+      setLogoResult({ ok: true, msg: "Logo removed." });
+    } catch (err) {
+      setLogoResult({ ok: false, msg: err instanceof Error ? err.message : "Remove failed." });
+    } finally {
+      setLogoUploading(false);
     }
   }
 
@@ -512,6 +565,49 @@ export default function SettingsPage() {
                   title="Store Details"
                   description="Business information shown on receipts and invoices"
                 />
+                <Field label="Logo">
+                  <div className="flex items-center gap-3">
+                    {userData?.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={userData.logoUrl}
+                        alt="Business logo"
+                        className="w-12 h-12 rounded-md object-cover border border-slate-200"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-[11px]">
+                        No logo
+                      </div>
+                    )}
+                    <label className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">
+                      {logoUploading ? "Uploading..." : "Upload"}
+                      <input
+                        type="file"
+                        accept={LOGO_ACCEPTED_TYPES.join(",")}
+                        onChange={handleLogoChange}
+                        disabled={logoUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    {userData?.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={handleLogoRemove}
+                        disabled={logoUploading}
+                        className="text-[12px] font-medium px-3 py-1.5 rounded-md text-slate-500 hover:text-red-600 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {logoResult && (
+                    <p
+                      className={`text-[11px] mt-1.5 ${logoResult.ok ? "text-emerald-600" : "text-red-600"}`}
+                    >
+                      {logoResult.msg}
+                    </p>
+                  )}
+                </Field>
                 <Field label="Business Name">
                   <TextInput
                     value={storeForm.businessName}

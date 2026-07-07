@@ -17,6 +17,7 @@ export interface BusinessProfile {
   role: "client" | "staff"
   staffRole?: string | null
   businessName?: string
+  logoUrl?: string | null
   storeEmail?: string
   location?: string
   phone?: string
@@ -52,6 +53,7 @@ async function fetchProfile(): Promise<BusinessProfile | null> {
     const clientData = isClient
       ? {
           businessName: data.businessName as string | undefined,
+          logoUrl: data.logoUrl as string | null | undefined,
           storeEmail: data.storeEmail as string | undefined,
           location: data.location as string | undefined,
           phone: data.phone as string | undefined,
@@ -62,6 +64,7 @@ async function fetchProfile(): Promise<BusinessProfile | null> {
         }
       : {
           businessName: parent?.businessName as string | undefined,
+          logoUrl: parent?.logoUrl as string | null | undefined,
           storeEmail: parent?.storeEmail as string | undefined,
           location: parent?.location as string | undefined,
           phone: parent?.phone as string | undefined,
