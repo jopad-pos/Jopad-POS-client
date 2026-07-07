@@ -23,9 +23,11 @@ import {
   UtensilsCrossed,
   Settings,
   LogOut,
-  ChevronDown,
+  // ChevronDown,
   Lock,
   X,
+  Megaphone,
+  ShieldAlert,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSidebar } from "@/contexts/SidebarContext";
@@ -43,6 +45,7 @@ type NavItem = {
   badge?: string;
   featureKey?: FeatureKey;
   ownerOnly?: boolean;
+  ownerOrManagerOnly?: boolean;
 };
 
 const navGroups: { group: string; items: NavItem[] }[] = [
@@ -179,6 +182,18 @@ const navGroups: { group: string; items: NavItem[] }[] = [
 ];
 
 const bottomItems: NavItem[] = [
+  {
+    label: "Announcements",
+    href: "/dashboard/announcements",
+    icon: Megaphone,
+    ownerOrManagerOnly: true,
+  },
+  {
+    label: "Activity Log",
+    href: "/dashboard/activity-log",
+    icon: ShieldAlert,
+    ownerOnly: true,
+  },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 
@@ -212,6 +227,7 @@ export default function Sidebar() {
   const initials = profile?.name ? getInitials(profile.name) : "—";
 
   const isOwner = profile?.role === "client";
+  const isOwnerOrManager = isOwner || profile?.staffRole === "Manager";
 
   /** Returns true when the current plan does not include this feature. */
   function isPlanLocked(featureKey?: FeatureKey): boolean {
@@ -353,25 +369,31 @@ export default function Sidebar() {
 
         {/* Bottom nav */}
         <div className="px-3 pb-3 border-t border-slate-200 pt-3 space-y-0.5">
-          {bottomItems.map((item) => {
-            const active = isActive(item.href);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[12px] font-medium transition-colors ${
-                  active
-                    ? "bg-blue-50 text-blue-700"
-                    : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                <item.icon
-                  className={`w-4 h-4 shrink-0 ${active ? "text-blue-600" : ""}`}
-                />
-                {item.label}
-              </Link>
-            );
-          })}
+          {bottomItems
+            .filter(
+              (item) =>
+                (!item.ownerOrManagerOnly || isOwnerOrManager) &&
+                (!item.ownerOnly || isOwner),
+            )
+            .map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-2.5 px-3 py-2 rounded-md text-[12px] font-medium transition-colors ${
+                    active
+                      ? "bg-blue-50 text-blue-700"
+                      : "text-slate-500 hover:text-slate-700 hover:bg-slate-100"
+                  }`}
+                >
+                  <item.icon
+                    className={`w-4 h-4 shrink-0 ${active ? "text-blue-600" : ""}`}
+                  />
+                  {item.label}
+                </Link>
+              );
+            })}
 
           {/* User */}
           <div className="flex items-center gap-2.5 px-3 py-2 mt-2 rounded-md group hover:bg-slate-100 cursor-pointer transition-colors">
