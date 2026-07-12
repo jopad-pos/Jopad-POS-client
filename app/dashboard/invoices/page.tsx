@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Plus, Search, MoreHorizontal, FileText, Download } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranchQuery } from "@/contexts/BranchContext";
 import PlanGate from "@/components/PlanGate";
 import { usePagination, Paginator } from "../components/Paginator";
 import { printInvoice } from "./components/printInvoice";
@@ -17,11 +18,13 @@ import {
 import InvoiceModal from "./components/InvoiceModal";
 import ViewInvoiceModal from "./components/ViewInvoiceModal";
 import DeleteConfirm from "./components/DeleteConfirm";
+import MarkPaidModal from "./components/MarkPaidModal";
 
 const PAGE_SIZE = 15;
 
 export default function InvoicesPage() {
   const { profile } = useAuth();
+  const branchQuery = useBranchQuery();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [stats, setStats] = useState<InvoiceStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -34,6 +37,7 @@ export default function InvoicesPage() {
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
   const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
+  const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -41,8 +45,8 @@ export default function InvoicesPage() {
   function load() {
     setLoading(true);
     Promise.all([
-      apiRequest<{ items: Invoice[] }>("/api/invoices?limit=500"),
-      apiRequest<InvoiceStats>("/api/invoices/stats"),
+      apiRequest<{ items: Invoice[] }>(`/api/invoices?limit=500${branchQuery}`),
+      apiRequest<InvoiceStats>(`/api/invoices/stats?1=1${branchQuery}`),
     ])
       .then(([list, s]) => {
         setInvoices(list.items);
@@ -57,7 +61,8 @@ export default function InvoicesPage() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchQuery]);
 
   const filtered = useMemo(() => {
     return invoices.filter((inv) => {
@@ -88,6 +93,12 @@ export default function InvoicesPage() {
   function handleDeleted(id: string) {
     setInvoices((prev) => prev.filter((i) => i._id !== id));
     setDeleteInvoice(null);
+    apiRequest<InvoiceStats>("/api/invoices/stats").then(setStats).catch(() => {});
+  }
+
+  function handlePaid(inv: Invoice) {
+    setInvoices((prev) => prev.map((i) => (i._id === inv._id ? inv : i)));
+    setPayInvoice(null);
     apiRequest<InvoiceStats>("/api/invoices/stats").then(setStats).catch(() => {});
   }
 
@@ -205,7 +216,7 @@ export default function InvoicesPage() {
                 {["Invoice", "Customer", "Date", "Due Date", "Items", "Amount", "Status", ""].map((h) => (
                   <th
                     key={h}
-                    className={`px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left ${["Items", "Amount"].includes(h) ? "text-right" : ""}`}
+                    className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                   >
                     {h}
                   </th>
@@ -257,10 +268,10 @@ export default function InvoicesPage() {
                         {fmtDate(inv.dueDate)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[12px] text-slate-600 tabular-nums">{inv.items}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] font-semibold text-slate-900 tabular-nums whitespace-nowrap">
                         UGX {inv.amount.toLocaleString()}
                       </span>
@@ -287,19 +298,33 @@ export default function InvoicesPage() {
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                         {openMenu === inv._id && (
-                          <div className="absolute right-0 top-7 w-36 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
-                            <button
-                              className="w-full text-left px-3 py-1.5 text-[12px] text-slate-700 hover:bg-slate-50"
-                              onClick={() => { setOpenMenu(null); setEditInvoice(inv); }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="w-full text-left px-3 py-1.5 text-[12px] text-red-600 hover:bg-red-50"
-                              onClick={() => { setOpenMenu(null); setDeleteInvoice(inv); }}
-                            >
-                              Delete
-                            </button>
+                          <div className="absolute right-0 top-7 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
+                            {inv.status === "Paid" ? (
+                              <p className="px-3 py-1.5 text-[11px] text-slate-400">
+                                Paid — see Sales to void
+                              </p>
+                            ) : (
+                              <>
+                                <button
+                                  className="w-full text-left px-3 py-1.5 text-[12px] text-emerald-700 hover:bg-emerald-50"
+                                  onClick={() => { setOpenMenu(null); setPayInvoice(inv); }}
+                                >
+                                  Mark as Paid
+                                </button>
+                                <button
+                                  className="w-full text-left px-3 py-1.5 text-[12px] text-slate-700 hover:bg-slate-50"
+                                  onClick={() => { setOpenMenu(null); setEditInvoice(inv); }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="w-full text-left px-3 py-1.5 text-[12px] text-red-600 hover:bg-red-50"
+                                  onClick={() => { setOpenMenu(null); setDeleteInvoice(inv); }}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -325,6 +350,7 @@ export default function InvoicesPage() {
           invoice={viewInvoice}
           onClose={() => setViewInvoice(null)}
           onEdit={(inv) => setEditInvoice(inv)}
+          onMarkPaid={(inv) => setPayInvoice(inv)}
         />
       )}
       {deleteInvoice && (
@@ -332,6 +358,13 @@ export default function InvoicesPage() {
           invoice={deleteInvoice}
           onClose={() => setDeleteInvoice(null)}
           onDeleted={handleDeleted}
+        />
+      )}
+      {payInvoice && (
+        <MarkPaidModal
+          invoice={payInvoice}
+          onClose={() => setPayInvoice(null)}
+          onPaid={handlePaid}
         />
       )}
     </div>

@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { Plus, Search, MoreHorizontal, ClipboardList, Download, ArrowRight } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
+import { useBranchQuery } from "@/contexts/BranchContext";
 import PlanGate from "@/components/PlanGate";
 import { usePagination, Paginator } from "../components/Paginator";
 import { printQuotation } from "./components/printQuotation";
@@ -22,6 +23,7 @@ const PAGE_SIZE = 15;
 
 export default function QuotationsPage() {
   const { profile } = useAuth();
+  const branchQuery = useBranchQuery();
   const [quotations, setQuotations] = useState<Quotation[]>([]);
   const [stats, setStats] = useState<QuotationStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,8 +44,8 @@ export default function QuotationsPage() {
   function load() {
     setLoading(true);
     Promise.all([
-      apiRequest<{ items: Quotation[] }>("/api/quotations?limit=500"),
-      apiRequest<QuotationStats>("/api/quotations/stats"),
+      apiRequest<{ items: Quotation[] }>(`/api/quotations?limit=500${branchQuery}`),
+      apiRequest<QuotationStats>(`/api/quotations/stats?1=1${branchQuery}`),
     ])
       .then(([list, s]) => {
         setQuotations(list.items);
@@ -58,7 +60,8 @@ export default function QuotationsPage() {
 
   useEffect(() => {
     load();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [branchQuery]);
 
   const filtered = useMemo(() => {
     return quotations.filter((q) => {
@@ -232,7 +235,7 @@ export default function QuotationsPage() {
                 {["Quotation", "Customer", "Date", "Valid Until", "Items", "Amount", "Status", ""].map((h) => (
                   <th
                     key={h}
-                    className={`px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left ${["Items", "Amount"].includes(h) ? "text-right" : ""}`}
+                    className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                   >
                     {h}
                   </th>
@@ -284,10 +287,10 @@ export default function QuotationsPage() {
                         {fmtDate(q.validUntil)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[12px] text-slate-600 tabular-nums">{q.items}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] font-semibold text-slate-900 tabular-nums whitespace-nowrap">
                         UGX {q.amount.toLocaleString()}
                       </span>

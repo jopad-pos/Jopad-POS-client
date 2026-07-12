@@ -3,6 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Search, Plus, MoreHorizontal, Truck } from "lucide-react";
 import { Supplier, SupplierStatus, supplierStatusConfig } from "./types";
+import { Paginator, usePagination } from "../../components/Paginator";
+
+const PAGE_SIZE = 15;
 
 // ─── Row Menu ─────────────────────────────────────────────────────────────────
 
@@ -90,6 +93,7 @@ export default function SuppliersTable({
   onDelete,
 }: Props) {
   const statuses = ["All", "Active", "Inactive"];
+  const { page, setPage, totalPages, paged } = usePagination(filtered, PAGE_SIZE);
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg flex flex-col flex-1 min-h-0">
@@ -152,7 +156,7 @@ export default function SuppliersTable({
                 {["Supplier", "Contact", "Email", "Categories", "Status", ""].map((h) => (
                   <th
                     key={h}
-                    className="px-4 py-3 text-[12px] font-semibold text-black uppercase tracking-wider whitespace-nowrap text-left"
+                    className="px-4 py-3 text-[12px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                   >
                     {h}
                   </th>
@@ -160,7 +164,7 @@ export default function SuppliersTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filtered.map((s) => {
+              {paged.map((s) => {
                 const sc = supplierStatusConfig[s.status as SupplierStatus];
                 return (
                   <tr key={s._id} className="hover:bg-slate-100 transition-colors group">
@@ -231,6 +235,12 @@ export default function SuppliersTable({
       </div>
 
       {/* Footer */}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        total={filtered.length}
+        setPage={setPage}
+      />
       <div className="px-4 py-3 border-t border-slate-100">
         <p className="text-[12px] text-slate-400">
           {filtered.length}

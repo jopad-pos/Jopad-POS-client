@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { apiRequest, ApiError } from "@/lib/api";
+import PlanGate from "@/components/PlanGate";
 import { useBranch, Branch } from "@/contexts/BranchContext";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -343,6 +344,14 @@ function DeleteConfirm({
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function BranchesPage() {
+  return (
+    <PlanGate featureKey="branches">
+      <BranchesDashboard />
+    </PlanGate>
+  );
+}
+
+function BranchesDashboard() {
   const { refreshBranches } = useBranch();
   const { profile } = useAuth();
   const router = useRouter();

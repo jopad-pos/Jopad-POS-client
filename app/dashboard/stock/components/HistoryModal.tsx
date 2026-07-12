@@ -49,9 +49,11 @@ export default function HistoryModal({ product, onClose }: Props) {
                 <li key={m._id} className="flex items-start gap-3 text-[12px]">
                   <span
                     className={`mt-0.5 px-2 py-0.5 rounded text-[10px] font-semibold whitespace-nowrap ${
-                      m.type === "in" || m.type === "purchase"
+                      m.type === "in" || m.type === "purchase" || m.type === "transfer_in"
                         ? "bg-emerald-50 text-emerald-700"
-                        : m.type === "out" || m.type === "sale"
+                        : m.type === "damaged"
+                        ? "bg-orange-50 text-orange-700"
+                        : m.type === "out" || m.type === "sale" || m.type === "transfer_out"
                         ? "bg-red-50 text-red-600"
                         : "bg-blue-50 text-blue-600"
                     }`}
@@ -61,6 +63,7 @@ export default function HistoryModal({ product, onClose }: Props) {
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700">
                       {m.previousQty} → <span className="font-semibold">{m.newQty}</span>
+                      {m.reason ? <span className="text-slate-400"> · {m.reason}</span> : null}
                       {m.note ? <span className="text-slate-400"> · {m.note}</span> : null}
                     </p>
                     <p className="text-slate-400 text-[11px] mt-0.5">

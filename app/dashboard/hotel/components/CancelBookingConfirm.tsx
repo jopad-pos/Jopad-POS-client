@@ -15,6 +15,9 @@ export default function CancelBookingConfirm({ booking, onClose, onCancelled }: 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const isReserved = booking.status === "reserved";
+  const title = isReserved ? "Cancel reservation?" : "Cancel check-in?";
+
   async function handleCancel() {
     setSaving(true);
     setError("");
@@ -36,11 +39,12 @@ export default function CancelBookingConfirm({ booking, onClose, onCancelled }: 
           <div className="w-9 h-9 rounded-full bg-red-50 flex items-center justify-center">
             <AlertTriangle className="w-5 h-5 text-red-500" />
           </div>
-          <h2 className="text-slate-900 text-base font-semibold">Cancel check-in?</h2>
+          <h2 className="text-slate-900 text-base font-semibold">{title}</h2>
         </div>
         <p className="text-sm text-slate-500 mb-4">
-          {booking.guestName}&rsquo;s stay in Room {booking.roomNumber} ({booking.ref}) will be cancelled
-          and the room freed. No charge will be recorded for this stay.
+          {booking.guestName}&rsquo;s {isReserved ? "reservation for" : "stay in"} Room{" "}
+          {booking.roomNumber} ({booking.ref}) will be cancelled
+          {isReserved ? "" : " and the room freed"}. No charge will be recorded.
         </p>
         {error && (
           <div className="bg-red-50 border border-red-200 text-red-600 text-xs rounded-md px-3 py-2 mb-3">
@@ -60,7 +64,7 @@ export default function CancelBookingConfirm({ booking, onClose, onCancelled }: 
             className="flex items-center gap-1.5 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md disabled:opacity-60"
           >
             {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-            Cancel check-in
+            {isReserved ? "Cancel reservation" : "Cancel check-in"}
           </button>
         </div>
       </div>

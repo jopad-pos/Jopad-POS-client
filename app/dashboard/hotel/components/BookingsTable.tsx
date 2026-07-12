@@ -1,30 +1,79 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Search, MoreHorizontal } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Search, MoreHorizontal, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Paginator, usePagination } from "../../components/Paginator";
-import type { Booking, BookingStatus } from "./types";
+import type { Booking } from "./types";
 import {
   BOOKING_STATUS_STYLES,
+  BOOKING_STATUS_LABEL,
   formatMoney,
   formatDateTime,
 } from "./types";
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "All", label: "All" },
+  { key: "reserved", label: "Reserved" },
   { key: "checked-in", label: "In-house" },
   { key: "checked-out", label: "Checked out" },
   { key: "cancelled", label: "Cancelled" },
 ];
 
-const STATUS_LABEL: Record<BookingStatus, string> = {
-  "checked-in": "In-house",
-  "checked-out": "Checked out",
-  cancelled: "Cancelled",
-};
+type SortKey = "ref" | "guestName" | "roomNumber" | "checkInAt" | "checkOutAt";
 
-function RowMenu({ onCheckOut, onCancel }: { onCheckOut: () => void; onCancel: () => void }) {
+function SortHeader({
+  label,
+  sortKey,
+  activeKey,
+  direction,
+  onSort,
+}: {
+  label: string;
+  sortKey: SortKey;
+  activeKey: SortKey | null;
+  direction: "asc" | "desc";
+  onSort: (key: SortKey) => void;
+}) {
+  const active = activeKey === sortKey;
+  return (
+    <th className="text-left font-semibold px-4 py-2.5">
+      <button
+        onClick={() => onSort(sortKey)}
+        className={`flex items-center gap-0.5 uppercase tracking-wider transition-colors ${
+          active ? "text-slate-600" : "text-slate-400 hover:text-slate-600"
+        }`}
+      >
+        {label}
+        {active ? (
+          direction === "asc" ? (
+            <ChevronUp className="w-3 h-3" />
+          ) : (
+            <ChevronDown className="w-3 h-3" />
+          )
+        ) : (
+          <ChevronsUpDown className="w-3 h-3 text-slate-300" />
+        )}
+      </button>
+    </th>
+  );
+}
+
+function RowMenu({
+  booking,
+  onCheckIn,
+  onCheckOut,
+  onCancel,
+  onViewDetails,
+  onEdit,
+}: {
+  booking: Booking;
+  onCheckIn: () => void;
+  onCheckOut: () => void;
+  onCancel: () => void;
+  onViewDetails: () => void;
+  onEdit: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -48,6 +97,8 @@ function RowMenu({ onCheckOut, onCancel }: { onCheckOut: () => void; onCancel: (
     </button>
   );
 
+  const canCancel = booking.status === "reserved" || booking.status === "checked-in";
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -57,10 +108,17 @@ function RowMenu({ onCheckOut, onCancel }: { onCheckOut: () => void; onCancel: (
         <MoreHorizontal className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
-          {item("Check out", onCheckOut)}
-          <div className="border-t border-slate-100 my-1" />
-          {item("Cancel", onCancel, true)}
+        <div className="absolute right-0 z-20 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
+          {item("View details", onViewDetails)}
+          {booking.status === "reserved" && item("Edit reservation", onEdit)}
+          {booking.status === "reserved" && item("Check in", onCheckIn)}
+          {booking.status === "checked-in" && item("Check out", onCheckOut)}
+          {canCancel && (
+            <>
+              <div className="border-t border-slate-100 my-1" />
+              {item("Cancel", onCancel, true)}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -74,8 +132,11 @@ interface BookingsTableProps {
   onSearchChange: (v: string) => void;
   statusFilter: string;
   onStatusChange: (v: string) => void;
+  onCheckIn: (booking: Booking) => void;
   onCheckOut: (booking: Booking) => void;
   onCancel: (booking: Booking) => void;
+  onViewDetails: (booking: Booking) => void;
+  onEdit: (booking: Booking) => void;
 }
 
 export default function BookingsTable({
@@ -85,11 +146,26 @@ export default function BookingsTable({
   onSearchChange,
   statusFilter,
   onStatusChange,
+  onCheckIn,
   onCheckOut,
   onCancel,
+  onViewDetails,
+  onEdit,
 }: BookingsTableProps) {
   const { profile } = useAuth();
   const currency = profile?.currency ?? "UGX";
+
+  const [sortKey, setSortKey] = useState<SortKey | null>(null);
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  const handleSort = (key: SortKey) => {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir("asc");
+    }
+  };
 
   const filtered = bookings.filter((b) => {
     if (statusFilter !== "All" && b.status !== statusFilter) return false;
@@ -105,7 +181,28 @@ export default function BookingsTable({
     return true;
   });
 
-  const { page, setPage, totalPages, paged } = usePagination(filtered, 10);
+  const sorted = useMemo(() => {
+    const list = [...filtered];
+    if (!sortKey) {
+      // Default: most recently made bookings first.
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return list;
+    }
+    list.sort((a, b) => {
+      let cmp: number;
+      if (sortKey === "checkInAt" || sortKey === "checkOutAt") {
+        const aTime = a[sortKey] ? new Date(a[sortKey] as string).getTime() : 0;
+        const bTime = b[sortKey] ? new Date(b[sortKey] as string).getTime() : 0;
+        cmp = aTime - bTime;
+      } else {
+        cmp = a[sortKey].localeCompare(b[sortKey], undefined, { sensitivity: "base" });
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return list;
+  }, [filtered, sortKey, sortDir]);
+
+  const { page, setPage, totalPages, paged } = usePagination(sorted, 10);
 
   return (
     <div className="bg-white border border-slate-200 rounded-lg flex flex-col flex-1 min-h-0">
@@ -143,11 +240,11 @@ export default function BookingsTable({
         <table className="w-full text-left">
           <thead className="sticky top-0 bg-slate-50 z-10">
             <tr className="text-[10px] uppercase tracking-wider text-slate-400">
-              <th className="text-left font-semibold px-4 py-2.5">Ref</th>
-              <th className="text-left font-semibold px-4 py-2.5">Guest</th>
-              <th className="text-left font-semibold px-4 py-2.5">Room</th>
-              <th className="text-left font-semibold px-4 py-2.5">Check-in</th>
-              <th className="text-left font-semibold px-4 py-2.5">Check-out</th>
+              <SortHeader label="Ref" sortKey="ref" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Guest" sortKey="guestName" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Room" sortKey="roomNumber" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Check-in" sortKey="checkInAt" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
+              <SortHeader label="Check-out" sortKey="checkOutAt" activeKey={sortKey} direction={sortDir} onSort={handleSort} />
               <th className="text-left font-semibold px-4 py-2.5">Charge</th>
               <th className="text-left font-semibold px-4 py-2.5">Status</th>
               <th className="text-left font-semibold px-4 py-2.5"></th>
@@ -178,21 +275,33 @@ export default function BookingsTable({
                   <td className="px-4 py-2.5 text-slate-600">{formatDateTime(b.checkInAt)}</td>
                   <td className="px-4 py-2.5 text-slate-600">{formatDateTime(b.checkOutAt)}</td>
                   <td className="px-4 py-2.5 text-slate-700 tabular-nums">
-                    {b.status === "checked-out"
-                      ? formatMoney(b.totalCharge, currency)
-                      : "—"}
+                    {b.totalCharge > 0 ? (
+                      <div className="flex flex-col">
+                        <span>{formatMoney(b.totalCharge, currency)}</span>
+                        {b.paymentStatus === "paid" && b.status !== "checked-out" && (
+                          <span className="text-[10px] text-emerald-600 font-medium">Paid</span>
+                        )}
+                      </div>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <span
                       className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded border ${BOOKING_STATUS_STYLES[b.status]}`}
                     >
-                      {STATUS_LABEL[b.status]}
+                      {BOOKING_STATUS_LABEL[b.status]}
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
-                    {b.status === "checked-in" && (
-                      <RowMenu onCheckOut={() => onCheckOut(b)} onCancel={() => onCancel(b)} />
-                    )}
+                    <RowMenu
+                      booking={b}
+                      onCheckIn={() => onCheckIn(b)}
+                      onCheckOut={() => onCheckOut(b)}
+                      onCancel={() => onCancel(b)}
+                      onViewDetails={() => onViewDetails(b)}
+                      onEdit={() => onEdit(b)}
+                    />
                   </td>
                 </tr>
               ))
@@ -201,7 +310,7 @@ export default function BookingsTable({
         </table>
       </div>
 
-      <Paginator page={page} totalPages={totalPages} total={filtered.length} setPage={setPage} />
+      <Paginator page={page} totalPages={totalPages} total={sorted.length} setPage={setPage} />
     </div>
   );
 }

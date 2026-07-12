@@ -45,6 +45,7 @@ interface UserData {
   email: string;
   role: string;
   businessName?: string;
+  logoUrl?: string | null;
   storeEmail?: string;
   location?: string;
   phone?: string;
@@ -57,6 +58,12 @@ interface UserData {
   receiptAutoPrint?: boolean;
   receiptCopies?: number;
   staffPermissions?: Record<string, string[]>;
+  notifyLowStock?: boolean;
+  notifyDailySummary?: boolean;
+  notifyWhatsappSummary?: boolean;
+  notifySmsAlerts?: boolean;
+  notifyOverdueCredit?: boolean;
+  lowStockThreshold?: "min" | "5" | "10";
 }
 
 // ── Shared UI primitives ─────────────────────────────────────────────────────
@@ -279,6 +286,26 @@ function makeReceiptForm(d: UserData): ReceiptForm {
   };
 }
 
+interface NotifForm {
+  notifyLowStock: boolean;
+  notifyDailySummary: boolean;
+  notifyWhatsappSummary: boolean;
+  notifySmsAlerts: boolean;
+  notifyOverdueCredit: boolean;
+  lowStockThreshold: "min" | "5" | "10";
+}
+
+function makeNotifForm(d: UserData): NotifForm {
+  return {
+    notifyLowStock: d.notifyLowStock ?? true,
+    notifyDailySummary: d.notifyDailySummary ?? true,
+    notifyWhatsappSummary: d.notifyWhatsappSummary ?? true,
+    notifySmsAlerts: d.notifySmsAlerts ?? false,
+    notifyOverdueCredit: d.notifyOverdueCredit ?? true,
+    lowStockThreshold: d.lowStockThreshold ?? "min",
+  };
+}
+
 export default function SettingsPage() {
   const [active, setActive] = useState("store");
   const { refreshProfile } = useAuth();
@@ -312,12 +339,25 @@ export default function SettingsPage() {
 
   const [storeSaving, setStoreSaving] = useState(false);
   const [storeResult, setStoreResult] = useState<{ ok: boolean; msg: string } | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoResult, setLogoResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [receiptSaving, setReceiptSaving] = useState(false);
   const [receiptResult, setReceiptResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [accountSaving, setAccountSaving] = useState(false);
   const [accountResult, setAccountResult] = useState<{ ok: boolean; msg: string } | null>(null);
   const [passwordSaving, setPasswordSaving] = useState(false);
   const [passwordResult, setPasswordResult] = useState<{ ok: boolean; msg: string } | null>(null);
+
+  const [notifForm, setNotifForm] = useState<NotifForm>({
+    notifyLowStock: true,
+    notifyDailySummary: true,
+    notifyWhatsappSummary: true,
+    notifySmsAlerts: false,
+    notifyOverdueCredit: true,
+    lowStockThreshold: "min",
+  });
+  const [notifSaving, setNotifSaving] = useState(false);
+  const [notifResult, setNotifResult] = useState<{ ok: boolean; msg: string } | null>(null);
 
   const [permissionsForm, setPermissionsForm] = useState<Record<StaffRole, FeatureKey[]>>(
     makePermissionsForm(),
@@ -333,6 +373,7 @@ export default function SettingsPage() {
         setStoreForm(makeStoreForm(data));
         setReceiptForm(makeReceiptForm(data));
         setAccountForm({ name: data.name });
+        setNotifForm(makeNotifForm(data));
         setPermissionsForm(makePermissionsForm(data.staffPermissions));
         // Staff can't open owner-only sections — land them on a visible one
         if (data.role !== "client" && ALL_SECTIONS.find((s) => s.id === "store")?.ownerOnly) {
@@ -344,6 +385,30 @@ export default function SettingsPage() {
       })
       .catch(() => {/* silently fail */});
   }, []);
+
+  // ── Notification handlers ────────────────────────────────────────────────
+
+  function setNotif<K extends keyof NotifForm>(k: K, v: NotifForm[K]) {
+    setNotifForm((p) => ({ ...p, [k]: v }));
+  }
+
+  async function handleSaveNotifications(e: React.FormEvent) {
+    e.preventDefault();
+    setNotifSaving(true);
+    setNotifResult(null);
+    try {
+      const updated = await apiRequest<UserData>("/api/auth/notifications", {
+        method: "PUT",
+        body: JSON.stringify(notifForm),
+      });
+      setUserData(updated);
+      setNotifResult({ ok: true, msg: "Notification preferences saved." });
+    } catch (err) {
+      setNotifResult({ ok: false, msg: err instanceof Error ? err.message : "Save failed." });
+    } finally {
+      setNotifSaving(false);
+    }
+  }
 
   // ── Store Details handlers ───────────────────────────────────────────────
 
@@ -363,6 +428,56 @@ export default function SettingsPage() {
       setStoreResult({ ok: false, msg: err instanceof Error ? err.message : "Save failed." });
     } finally {
       setStoreSaving(false);
+    }
+  }
+
+  // ── Logo handlers ────────────────────────────────────────────────────────
+
+  const LOGO_MAX_BYTES = 2 * 1024 * 1024;
+  const LOGO_ACCEPTED_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+
+  async function handleLogoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    if (!LOGO_ACCEPTED_TYPES.includes(file.type)) {
+      setLogoResult({ ok: false, msg: "Logo must be a PNG, JPEG, WEBP, or SVG image." });
+      return;
+    }
+    if (file.size > LOGO_MAX_BYTES) {
+      setLogoResult({ ok: false, msg: "Logo must be under 2MB." });
+      return;
+    }
+
+    setLogoUploading(true);
+    setLogoResult(null);
+    try {
+      const form = new FormData();
+      form.append("logo", file);
+      const updated = await apiRequest<UserData>("/api/auth/logo", { method: "POST", body: form });
+      setUserData(updated);
+      await refreshProfile();
+      setLogoResult({ ok: true, msg: "Logo updated." });
+    } catch (err) {
+      setLogoResult({ ok: false, msg: err instanceof Error ? err.message : "Upload failed." });
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  async function handleLogoRemove() {
+    setLogoUploading(true);
+    setLogoResult(null);
+    try {
+      const updated = await apiRequest<UserData>("/api/auth/logo", { method: "DELETE" });
+      setUserData(updated);
+      await refreshProfile();
+      setLogoResult({ ok: true, msg: "Logo removed." });
+    } catch (err) {
+      setLogoResult({ ok: false, msg: err instanceof Error ? err.message : "Remove failed." });
+    } finally {
+      setLogoUploading(false);
     }
   }
 
@@ -512,6 +627,49 @@ export default function SettingsPage() {
                   title="Store Details"
                   description="Business information shown on receipts and invoices"
                 />
+                <Field label="Logo">
+                  <div className="flex items-center gap-3">
+                    {userData?.logoUrl ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={userData.logoUrl}
+                        alt="Business logo"
+                        className="w-12 h-12 rounded-md object-cover border border-slate-200"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 rounded-md bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-400 text-[11px]">
+                        No logo
+                      </div>
+                    )}
+                    <label className="text-[12px] font-medium px-3 py-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 cursor-pointer transition-colors">
+                      {logoUploading ? "Uploading..." : "Upload"}
+                      <input
+                        type="file"
+                        accept={LOGO_ACCEPTED_TYPES.join(",")}
+                        onChange={handleLogoChange}
+                        disabled={logoUploading}
+                        className="hidden"
+                      />
+                    </label>
+                    {userData?.logoUrl && (
+                      <button
+                        type="button"
+                        onClick={handleLogoRemove}
+                        disabled={logoUploading}
+                        className="text-[12px] font-medium px-3 py-1.5 rounded-md text-slate-500 hover:text-red-600 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                  {logoResult && (
+                    <p
+                      className={`text-[11px] mt-1.5 ${logoResult.ok ? "text-emerald-600" : "text-red-600"}`}
+                    >
+                      {logoResult.msg}
+                    </p>
+                  )}
+                </Field>
                 <Field label="Business Name">
                   <TextInput
                     value={storeForm.businessName}
@@ -640,31 +798,64 @@ export default function SettingsPage() {
 
           {/* ── Notifications ── */}
           {active === "notifications" && (
-            <div className="space-y-4">
+            <form onSubmit={handleSaveNotifications} className="space-y-4">
               <SectionHeader
                 title="Notifications"
                 description="Control what alerts you receive and how"
               />
-              {[
-                { label: "Low stock alerts", desc: "Get notified when a product drops below minimum quantity", def: true },
-                { label: "Daily sales summary", desc: "Receive a summary of the day's sales at close of business", def: true },
-                { label: "WhatsApp summaries", desc: "Send daily summaries via WhatsApp", def: true },
-                { label: "SMS alerts", desc: "Send critical alerts via SMS", def: false },
-                { label: "Overdue credit reminders", desc: "Alert when a customer credit account is overdue", def: true },
-              ].map((t) => (
-                <StaticToggle key={t.label} label={t.label} description={t.desc} defaultChecked={t.def} />
-              ))}
+              <Toggle
+                label="Low stock alerts"
+                description="Get notified when a product drops below minimum quantity"
+                checked={notifForm.notifyLowStock}
+                onChange={(v) => setNotif("notifyLowStock", v)}
+              />
+              <Toggle
+                label="Daily sales summary"
+                description="Receive a summary of the day's sales at close of business"
+                checked={notifForm.notifyDailySummary}
+                onChange={(v) => setNotif("notifyDailySummary", v)}
+              />
+              <Toggle
+                label="WhatsApp summaries"
+                description="Send daily summaries via WhatsApp"
+                checked={notifForm.notifyWhatsappSummary}
+                onChange={(v) => setNotif("notifyWhatsappSummary", v)}
+              />
+              <Toggle
+                label="SMS alerts"
+                description="Send critical alerts via SMS"
+                checked={notifForm.notifySmsAlerts}
+                onChange={(v) => setNotif("notifySmsAlerts", v)}
+              />
+              <Toggle
+                label="Overdue credit reminders"
+                description="Alert when a customer credit account is overdue"
+                checked={notifForm.notifyOverdueCredit}
+                onChange={(v) => setNotif("notifyOverdueCredit", v)}
+              />
               <Field label="WhatsApp Number">
                 <TextInput value={userData?.phone ?? ""} readOnly />
               </Field>
               <Field label="Low stock threshold">
-                <select className="text-[12px] text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                  <option>Below minimum quantity</option>
-                  <option>Below 5 units</option>
-                  <option>Below 10 units</option>
+                <select
+                  value={notifForm.lowStockThreshold}
+                  onChange={(e) => setNotif("lowStockThreshold", e.target.value as NotifForm["lowStockThreshold"])}
+                  className="text-[12px] text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2.5 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                >
+                  <option value="min">Below minimum quantity</option>
+                  <option value="5">Below 5 units</option>
+                  <option value="10">Below 10 units</option>
                 </select>
               </Field>
-            </div>
+              <SaveBar
+                saving={notifSaving || loading}
+                result={notifResult}
+                onDiscard={() => {
+                  if (userData) setNotifForm(makeNotifForm(userData));
+                  setNotifResult(null);
+                }}
+              />
+            </form>
           )}
 
           {/* ── Staff Access ── */}
@@ -848,36 +1039,6 @@ export default function SettingsPage() {
           )}
 
         </div>
-      </div>
-    </div>
-  );
-}
-
-// Uncontrolled toggle for the static Notifications tab
-function StaticToggle({
-  label,
-  description,
-  defaultChecked,
-}: {
-  label: string;
-  description?: string;
-  defaultChecked?: boolean;
-}) {
-  const [on, setOn] = useState(defaultChecked ?? false);
-  return (
-    <div className="flex items-start gap-4">
-      <label className="text-[12px] text-slate-600 w-44 flex-shrink-0 pt-0.5">{label}</label>
-      <div className="flex-1">
-        <button
-          type="button"
-          onClick={() => setOn(!on)}
-          className={`relative inline-flex h-5 w-9 rounded-full transition-colors ${on ? "bg-blue-600" : "bg-slate-200"}`}
-        >
-          <span
-            className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${on ? "translate-x-4" : "translate-x-0.5"}`}
-          />
-        </button>
-        {description && <p className="text-[11px] text-slate-400 mt-1">{description}</p>}
       </div>
     </div>
   );

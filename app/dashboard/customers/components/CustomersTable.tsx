@@ -9,6 +9,9 @@ import {
   formatLastVisit,
   typeStyles,
 } from "./types";
+import { Paginator, usePagination } from "../../components/Paginator";
+
+const PAGE_SIZE = 15;
 
 function RowMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void }) {
   const [open, setOpen] = useState(false);
@@ -86,6 +89,7 @@ export default function CustomersTable({
   onEdit,
   onDelete,
 }: Props) {
+  const { page, setPage, totalPages, paged } = usePagination(filtered, PAGE_SIZE);
   return (
     <div className="bg-white border border-slate-200 rounded-lg flex flex-col flex-1 min-h-0">
       {/* Toolbar */}
@@ -158,9 +162,7 @@ export default function CustomersTable({
                   (h) => (
                     <th
                       key={h}
-                      className={`px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left ${
-                        ["Visits", "Total Spent", "Credit Balance"].includes(h) ? "text-right" : ""
-                      }`}
+                      className="px-4 py-3 text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap text-left"
                     >
                       {h}
                     </th>
@@ -169,7 +171,7 @@ export default function CustomersTable({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
-              {filtered.map((c) => {
+              {paged.map((c) => {
                 const type: CustomerType = getCustomerType(c.visits);
                 return (
                   <tr key={c._id} className="hover:bg-slate-100 transition-colors group">
@@ -197,15 +199,15 @@ export default function CustomersTable({
                         {type}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[13px] text-slate-700 tabular-nums">{c.visits}</span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span className="text-[12px] font-medium text-slate-800 tabular-nums whitespace-nowrap">
                         UGX {c.totalSpent.toLocaleString()}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-right">
+                    <td className="px-4 py-3">
                       <span
                         className={`text-[12px] font-semibold tabular-nums whitespace-nowrap ${
                           c.overdueCredit
@@ -235,6 +237,12 @@ export default function CustomersTable({
       </div>
 
       {/* Footer */}
+      <Paginator
+        page={page}
+        totalPages={totalPages}
+        total={filtered.length}
+        setPage={setPage}
+      />
       <div className="px-4 py-3 border-t border-slate-100">
         <p className="text-[12px] text-slate-400">
           {filtered.length}

@@ -14,7 +14,7 @@ interface Props {
 export default function ViewPurchaseModal({ purchase, onClose, onEdit, onReceive }: Props) {
   const s = purchaseStatusConfig[purchase.status];
   const hasLineItems = (purchase.lineItems?.length ?? 0) > 0;
-  const canReceive = hasLineItems && !purchase.stockUpdated;
+  const canReceive = hasLineItems && purchase.status !== "Received";
 
   return (
     <ModalOverlay onClose={onClose}>
@@ -78,6 +78,11 @@ export default function ViewPurchaseModal({ purchase, onClose, onEdit, onReceive
                     Stock Updated
                   </span>
                 )}
+                {purchase.status === "Partial" && (
+                  <span className="text-[11px] px-2 py-0.5 rounded font-medium bg-blue-50 text-blue-700">
+                    Remainder pending
+                  </span>
+                )}
               </div>
             </div>
             <Row label="Date" value={purchase.date} />
@@ -95,6 +100,7 @@ export default function ViewPurchaseModal({ purchase, onClose, onEdit, onReceive
                     <tr className="bg-slate-50 border-b border-slate-200">
                       <th className="text-left px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide">Product</th>
                       <th className="text-left px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide w-16">Qty</th>
+                      <th className="text-left px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide w-20">Received</th>
                       <th className="text-left px-3 py-2 text-[10px] font-semibold text-slate-500 uppercase tracking-wide w-24">Buy Price</th>
                     </tr>
                   </thead>
@@ -103,6 +109,23 @@ export default function ViewPurchaseModal({ purchase, onClose, onEdit, onReceive
                       <tr key={idx}>
                         <td className="px-3 py-2 text-slate-700">{li.name}</td>
                         <td className="px-3 py-2 text-slate-700 tabular-nums">{li.qty}</td>
+                        <td className="px-3 py-2 tabular-nums">
+                          {li.productId ? (
+                            <span
+                              className={
+                                (li.receivedQty || 0) >= li.qty
+                                  ? "text-emerald-600 font-medium"
+                                  : (li.receivedQty || 0) > 0
+                                  ? "text-blue-600 font-medium"
+                                  : "text-slate-400"
+                              }
+                            >
+                              {li.receivedQty || 0} / {li.qty}
+                            </span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
                         <td className="px-3 py-2 text-slate-700 tabular-nums">
                           {li.buyPrice > 0 ? `UGX ${li.buyPrice.toLocaleString()}` : "—"}
                         </td>
@@ -123,7 +146,7 @@ export default function ViewPurchaseModal({ purchase, onClose, onEdit, onReceive
                 className="flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition"
               >
                 <PackageCheck className="w-4 h-4" />
-                Receive Stock
+                {purchase.status === "Partial" ? "Receive Remaining" : "Receive Stock"}
               </button>
             )}
           </div>

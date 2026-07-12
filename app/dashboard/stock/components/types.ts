@@ -41,9 +41,15 @@ export interface StatsData {
   lowOrCritical: number;
 }
 
+export interface PendingPurchaseRef {
+  status: "Received" | "Pending" | "Partial";
+  lineItems?: { productId?: string | null }[];
+}
+
 export interface Movement {
   _id: string;
-  type: "in" | "out" | "adjustment" | "sale" | "purchase";
+  type: "in" | "out" | "adjustment" | "sale" | "purchase" | "damaged" | "transfer_out" | "transfer_in";
+  reason?: string;
   qty: number;
   previousQty: number;
   newQty: number;
@@ -51,6 +57,8 @@ export interface Movement {
   createdBy?: { name: string; email: string };
   createdAt: string;
 }
+
+export const DAMAGE_REASONS = ["Breakage", "Expired", "Theft/Loss", "Other"] as const;
 
 export interface ProductFormState {
   name: string;
@@ -101,6 +109,9 @@ export const movementTypeLabel: Record<string, string> = {
   adjustment: "Adjustment",
   sale: "Sale",
   purchase: "Purchase",
+  damaged: "Damaged",
+  transfer_out: "Transferred Out",
+  transfer_in: "Transferred In",
 };
 
 export function exportCSV(products: Product[]) {

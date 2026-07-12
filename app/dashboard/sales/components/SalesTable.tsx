@@ -29,10 +29,12 @@ function RowMenu({
   onView,
   onPrint,
   onDelete,
+  canDelete,
 }: {
   onView: () => void;
   onPrint: () => void;
   onDelete: () => void;
+  canDelete: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -69,8 +71,12 @@ function RowMenu({
         <div className="absolute right-0 z-20 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
           {item("View Details", onView)}
           {item("Print Receipt", onPrint)}
-          <div className="border-t border-slate-100 my-1" />
-          {item("Delete", onDelete, true)}
+          {canDelete && (
+            <>
+              <div className="border-t border-slate-100 my-1" />
+              {item("Delete", onDelete, true)}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -107,6 +113,7 @@ interface Props {
   onView: (s: Sale) => void;
   onPrint: (s: Sale) => void;
   onDelete: (s: Sale) => void;
+  canDelete: boolean;
 }
 
 export default function SalesTable({
@@ -135,6 +142,7 @@ export default function SalesTable({
   onView,
   onPrint,
   onDelete,
+  canDelete,
 }: Props) {
   const pages = pageRange(page, totalPages);
 
@@ -324,6 +332,7 @@ export default function SalesTable({
                         onView={() => onView(sale)}
                         onPrint={() => onPrint(sale)}
                         onDelete={() => onDelete(sale)}
+                        canDelete={canDelete}
                       />
                     </div>
                   </td>

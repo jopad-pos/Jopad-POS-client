@@ -136,6 +136,11 @@ function SalesPageInner() {
   const cashCountToday = todaySales.filter((s) => s.method === "Cash").length;
   const mmCountToday = todaySales.filter((s) => s.method === "Mobile Money").length;
 
+  // Only the business owner or a Manager may delete a sale
+  const canDeleteSale =
+    profile?.role === "client" ||
+    (profile?.role === "staff" && profile?.staffRole === "Manager");
+
   return (
     <div className="p-5 flex flex-col h-full gap-4">
       {/* Summary cards */}
@@ -205,6 +210,7 @@ function SalesPageInner() {
         onView={setViewSale}
         onPrint={handlePrint}
         onDelete={setDeleteSale}
+        canDelete={canDeleteSale}
       />
 
       {/* Modals */}

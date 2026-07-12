@@ -9,6 +9,8 @@ export interface LineItem {
   unitPrice: number;
 }
 
+export type PaymentMethod = "Cash" | "Mobile Money" | "Card" | "Credit";
+
 export interface Invoice {
   _id: string;
   ref: string;
@@ -21,6 +23,9 @@ export interface Invoice {
   amount: number;
   notes?: string;
   lineItems?: LineItem[];
+  paymentMethod?: PaymentMethod | null;
+  paidAt?: string | null;
+  saleId?: string | null;
 }
 
 export interface InvoiceStats {

@@ -21,10 +21,16 @@ export const FEATURES = [
   { key: "accounting", label: "Accounting" },
   { key: "labels", label: "Labels & Barcodes" },
   { key: "hotel", label: "Hotel" },
+  { key: "restaurant", label: "Restaurant" },
   { key: "staff", label: "Staff Mgmt" },
+  { key: "transfers", label: "Stock Transfers" },
 ] as const;
 
-export type FeatureKey = (typeof FEATURES)[number]["key"];
+/**
+ * "branches" is plan-gated but owner-only, so it is not part of FEATURES
+ * (which drives the staff-permission matrix in Settings).
+ */
+export type FeatureKey = (typeof FEATURES)[number]["key"] | "branches";
 
 export type PlanTier = "Standard" | "Plus" | "Enterprise";
 
@@ -35,12 +41,15 @@ export const PLAN_GATED_FEATURES: Partial<Record<FeatureKey, PlanTier>> = {
   accounting: "Plus",
   labels: "Plus",
   hotel: "Enterprise",
+  restaurant: "Enterprise",
+  branches: "Enterprise",
+  transfers: "Enterprise",
 };
 
 export const DEFAULT_STAFF_PERMISSIONS: Record<StaffRole, FeatureKey[]> = {
-  Manager: ["sales", "stock", "services", "purchases", "customers", "suppliers", "reports", "invoices", "quotations", "accounting", "labels", "hotel", "staff"],
+  Manager: ["sales", "stock", "services", "purchases", "customers", "suppliers", "reports", "invoices", "quotations", "accounting", "labels", "hotel", "restaurant", "staff", "transfers"],
   Cashier: ["sales", "customers"],
-  "Stock Manager": ["stock", "purchases", "suppliers", "labels"],
+  "Stock Manager": ["stock", "purchases", "suppliers", "labels", "transfers"],
   Accountant: ["sales", "reports", "invoices", "quotations", "accounting"],
   "Sales Rep": ["sales", "services", "customers", "quotations"],
 };

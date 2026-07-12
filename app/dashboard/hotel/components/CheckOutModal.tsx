@@ -21,8 +21,9 @@ export default function CheckOutModal({ booking, onClose, onCheckedOut }: CheckO
   const [error, setError] = useState("");
   const [method, setMethod] = useState<PayMethod>("Cash");
 
-  const nights = nightsBetween(booking.checkInAt);
-  const total = nights * booking.nightlyRate;
+  const alreadyPaid = booking.paymentStatus === "paid";
+  const nights = alreadyPaid ? booking.nights : nightsBetween(booking.checkInAt);
+  const total = alreadyPaid ? booking.totalCharge : nights * booking.nightlyRate;
 
   async function handleCheckout() {
     setSaving(true);
@@ -75,26 +76,35 @@ export default function CheckOutModal({ booking, onClose, onCheckedOut }: CheckO
               <span>{formatMoney(total, currency)}</span>
             </div>
             <div className="flex items-center justify-between pt-2 border-t border-slate-200">
-              <span className="text-sm font-semibold text-slate-800">Total due</span>
+              <span className="text-sm font-semibold text-slate-800">
+                {alreadyPaid ? "Total paid" : "Total due"}
+              </span>
               <span className="text-lg font-semibold text-slate-900 tabular-nums">
                 {formatMoney(total, currency)}
               </span>
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
-            <select
-              className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
-              value={method}
-              onChange={(e) => setMethod(e.target.value as PayMethod)}
-            >
-              <option>Cash</option>
-              <option>Mobile Money</option>
-              <option>Card</option>
-              <option>Credit</option>
-            </select>
-          </div>
+          {alreadyPaid ? (
+            <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-md px-3 py-2 text-sm">
+              <span className="font-medium text-emerald-700">Paid at check-in</span>
+              <span className="text-emerald-700">{booking.paymentMethod}</span>
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">Payment Method</label>
+              <select
+                className="w-full border border-slate-200 rounded-md px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500"
+                value={method}
+                onChange={(e) => setMethod(e.target.value as PayMethod)}
+              >
+                <option>Cash</option>
+                <option>Mobile Money</option>
+                <option>Card</option>
+                <option>Credit</option>
+              </select>
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <button

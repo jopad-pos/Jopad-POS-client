@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { X, Plus, Trash2, UserPlus } from "lucide-react";
 import { apiRequest, ApiError } from "@/lib/api";
+import { useBranch } from "@/contexts/BranchContext";
 import {
   Quotation,
   QuotationStatus,
@@ -84,6 +85,7 @@ const rowInput =
   "w-full px-2 py-1.5 text-[12px] border border-slate-200 rounded bg-white text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-blue-500 transition";
 
 export default function QuotationModal({ quotation, onClose, onSaved }: Props) {
+  const { selectedBranchId } = useBranch();
   const isEdit = !!quotation;
 
   const [form, setForm] = useState<FormState>(
@@ -204,6 +206,7 @@ export default function QuotationModal({ quotation, onClose, onSaved }: Props) {
         validUntil: form.validUntil || null,
         status: form.status,
         notes: form.notes.trim(),
+        ...(isEdit ? {} : { branchId: selectedBranchId }),
         lineItems: validLines.map((li) => ({
           productId: li.productId || null,
           name: li.name.trim(),

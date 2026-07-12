@@ -11,9 +11,10 @@ interface Props {
   invoice: Invoice;
   onClose: () => void;
   onEdit: (inv: Invoice) => void;
+  onMarkPaid: (inv: Invoice) => void;
 }
 
-export default function ViewInvoiceModal({ invoice, onClose, onEdit }: Props) {
+export default function ViewInvoiceModal({ invoice, onClose, onEdit, onMarkPaid }: Props) {
   const { profile } = useAuth();
   const [full, setFull] = useState<Invoice | null>(null);
   const [loading, setLoading] = useState(true);
@@ -110,6 +111,16 @@ export default function ViewInvoiceModal({ invoice, onClose, onEdit }: Props) {
             </div>
           ) : null}
 
+          {data.status === "Paid" && (
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-3 py-2.5">
+              <p className="text-[10px] font-semibold text-emerald-700 uppercase tracking-wide">Payment</p>
+              <p className="text-[12px] text-emerald-800 mt-0.5">
+                Paid via {data.paymentMethod ?? "—"} on {fmtDate(data.paidAt)}. Recorded as a sale, reflected in
+                Sales, Reports, and Cash Flow.
+              </p>
+            </div>
+          )}
+
           {data.notes && (
             <div>
               <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-1">Notes</p>
@@ -131,12 +142,22 @@ export default function ViewInvoiceModal({ invoice, onClose, onEdit }: Props) {
             <button onClick={onClose} className="px-3.5 py-1.5 text-[12px] text-slate-600 hover:text-slate-800 hover:bg-slate-100 rounded-md transition">
               Close
             </button>
-            <button
-              onClick={() => { onClose(); onEdit(data); }}
-              className="px-4 py-1.5 text-[12px] font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
-            >
-              Edit
-            </button>
+            {data.status !== "Paid" && (
+              <>
+                <button
+                  onClick={() => { onClose(); onMarkPaid(data); }}
+                  className="px-4 py-1.5 text-[12px] font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-md transition"
+                >
+                  Mark as Paid
+                </button>
+                <button
+                  onClick={() => { onClose(); onEdit(data); }}
+                  className="px-4 py-1.5 text-[12px] font-medium bg-blue-600 hover:bg-blue-700 text-white rounded-md transition"
+                >
+                  Edit
+                </button>
+              </>
+            )}
           </div>
         </div>
       </div>
