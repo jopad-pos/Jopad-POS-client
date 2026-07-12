@@ -13,6 +13,7 @@ import { SummaryCards } from "./components/SummaryCards";
 import { RevenueBarChart } from "./components/RevenueBarChart";
 import { StaffPerformance } from "./components/StaffPerformance";
 import { TopProductsTable } from "./components/TopProductsTable";
+import { DamagedGoodsSummary } from "./components/DamagedGoodsSummary";
 
 function periodToDates(
   period: Period,
@@ -180,6 +181,12 @@ export default function ReportsPage() {
       <TopProductsTable
         loading={loading}
         data={data?.topProducts ?? []}
+        currency={currency}
+      />
+
+      <DamagedGoodsSummary
+        loading={loading}
+        data={data?.damagedGoods}
         currency={currency}
       />
     </div>

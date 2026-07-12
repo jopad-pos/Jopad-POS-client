@@ -4,25 +4,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Search, MoreHorizontal, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Paginator, usePagination } from "../../components/Paginator";
-import type { Booking, BookingStatus } from "./types";
+import type { Booking } from "./types";
 import {
   BOOKING_STATUS_STYLES,
+  BOOKING_STATUS_LABEL,
   formatMoney,
   formatDateTime,
 } from "./types";
 
 const FILTERS: { key: string; label: string }[] = [
   { key: "All", label: "All" },
+  { key: "reserved", label: "Reserved" },
   { key: "checked-in", label: "In-house" },
   { key: "checked-out", label: "Checked out" },
   { key: "cancelled", label: "Cancelled" },
 ];
-
-const STATUS_LABEL: Record<BookingStatus, string> = {
-  "checked-in": "In-house",
-  "checked-out": "Checked out",
-  cancelled: "Cancelled",
-};
 
 type SortKey = "ref" | "guestName" | "roomNumber" | "checkInAt" | "checkOutAt";
 
@@ -63,7 +59,21 @@ function SortHeader({
   );
 }
 
-function RowMenu({ onCheckOut, onCancel }: { onCheckOut: () => void; onCancel: () => void }) {
+function RowMenu({
+  booking,
+  onCheckIn,
+  onCheckOut,
+  onCancel,
+  onViewDetails,
+  onEdit,
+}: {
+  booking: Booking;
+  onCheckIn: () => void;
+  onCheckOut: () => void;
+  onCancel: () => void;
+  onViewDetails: () => void;
+  onEdit: () => void;
+}) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -87,6 +97,8 @@ function RowMenu({ onCheckOut, onCancel }: { onCheckOut: () => void; onCancel: (
     </button>
   );
 
+  const canCancel = booking.status === "reserved" || booking.status === "checked-in";
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -96,10 +108,17 @@ function RowMenu({ onCheckOut, onCancel }: { onCheckOut: () => void; onCancel: (
         <MoreHorizontal className="w-4 h-4" />
       </button>
       {open && (
-        <div className="absolute right-0 z-20 mt-1 w-32 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
-          {item("Check out", onCheckOut)}
-          <div className="border-t border-slate-100 my-1" />
-          {item("Cancel", onCancel, true)}
+        <div className="absolute right-0 z-20 mt-1 w-36 bg-white border border-slate-200 rounded-lg shadow-lg py-1">
+          {item("View details", onViewDetails)}
+          {booking.status === "reserved" && item("Edit reservation", onEdit)}
+          {booking.status === "reserved" && item("Check in", onCheckIn)}
+          {booking.status === "checked-in" && item("Check out", onCheckOut)}
+          {canCancel && (
+            <>
+              <div className="border-t border-slate-100 my-1" />
+              {item("Cancel", onCancel, true)}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -113,8 +132,11 @@ interface BookingsTableProps {
   onSearchChange: (v: string) => void;
   statusFilter: string;
   onStatusChange: (v: string) => void;
+  onCheckIn: (booking: Booking) => void;
   onCheckOut: (booking: Booking) => void;
   onCancel: (booking: Booking) => void;
+  onViewDetails: (booking: Booking) => void;
+  onEdit: (booking: Booking) => void;
 }
 
 export default function BookingsTable({
@@ -124,8 +146,11 @@ export default function BookingsTable({
   onSearchChange,
   statusFilter,
   onStatusChange,
+  onCheckIn,
   onCheckOut,
   onCancel,
+  onViewDetails,
+  onEdit,
 }: BookingsTableProps) {
   const { profile } = useAuth();
   const currency = profile?.currency ?? "UGX";
@@ -157,8 +182,12 @@ export default function BookingsTable({
   });
 
   const sorted = useMemo(() => {
-    if (!sortKey) return filtered;
     const list = [...filtered];
+    if (!sortKey) {
+      // Default: most recently made bookings first.
+      list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return list;
+    }
     list.sort((a, b) => {
       let cmp: number;
       if (sortKey === "checkInAt" || sortKey === "checkOutAt") {
@@ -246,21 +275,33 @@ export default function BookingsTable({
                   <td className="px-4 py-2.5 text-slate-600">{formatDateTime(b.checkInAt)}</td>
                   <td className="px-4 py-2.5 text-slate-600">{formatDateTime(b.checkOutAt)}</td>
                   <td className="px-4 py-2.5 text-slate-700 tabular-nums">
-                    {b.status === "checked-out"
-                      ? formatMoney(b.totalCharge, currency)
-                      : "—"}
+                    {b.totalCharge > 0 ? (
+                      <div className="flex flex-col">
+                        <span>{formatMoney(b.totalCharge, currency)}</span>
+                        {b.paymentStatus === "paid" && b.status !== "checked-out" && (
+                          <span className="text-[10px] text-emerald-600 font-medium">Paid</span>
+                        )}
+                      </div>
+                    ) : (
+                      "—"
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <span
                       className={`inline-block text-[10px] font-medium px-2 py-0.5 rounded border ${BOOKING_STATUS_STYLES[b.status]}`}
                     >
-                      {STATUS_LABEL[b.status]}
+                      {BOOKING_STATUS_LABEL[b.status]}
                     </span>
                   </td>
                   <td className="px-4 py-2.5">
-                    {b.status === "checked-in" && (
-                      <RowMenu onCheckOut={() => onCheckOut(b)} onCancel={() => onCancel(b)} />
-                    )}
+                    <RowMenu
+                      booking={b}
+                      onCheckIn={() => onCheckIn(b)}
+                      onCheckOut={() => onCheckOut(b)}
+                      onCancel={() => onCancel(b)}
+                      onViewDetails={() => onViewDetails(b)}
+                      onEdit={() => onEdit(b)}
+                    />
                   </td>
                 </tr>
               ))

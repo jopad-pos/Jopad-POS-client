@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Pencil, Trash2, BedDouble } from "lucide-react";
+import { Plus, Pencil, Trash2, BedDouble, CalendarClock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Paginator, usePagination } from "../../components/Paginator";
 import type { Room } from "./types";
@@ -12,6 +12,7 @@ interface RoomsBoardProps {
   isOwner: boolean;
   onAddRoom: () => void;
   onCheckIn: (room: Room) => void;
+  onReserve: (room: Room) => void;
   onCheckOut: (room: Room) => void;
   onEditRoom: (room: Room) => void;
   onDeleteRoom: (room: Room) => void;
@@ -23,6 +24,7 @@ export default function RoomsBoard({
   isOwner,
   onAddRoom,
   onCheckIn,
+  onReserve,
   onCheckOut,
   onEditRoom,
   onDeleteRoom,
@@ -99,6 +101,15 @@ export default function RoomsBoard({
                         className="flex-1 text-[11px] font-medium text-white bg-emerald-600 hover:bg-emerald-700 rounded px-2 py-1.5 disabled:bg-slate-300 disabled:cursor-not-allowed"
                       >
                         Check in
+                      </button>
+                    )}
+                    {!isMaintenance && (
+                      <button
+                        onClick={() => onReserve(room)}
+                        title="Reserve for a future date"
+                        className="p-1.5 rounded text-violet-500 hover:text-violet-700 hover:bg-white/60"
+                      >
+                        <CalendarClock className="w-3.5 h-3.5" />
                       </button>
                     )}
                     {isOwner && (

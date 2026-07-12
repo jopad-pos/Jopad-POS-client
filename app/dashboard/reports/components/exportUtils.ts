@@ -71,6 +71,17 @@ export function exportToExcel(
   staffSheet["!cols"] = [{ wch: 24 }, { wch: 10 }, { wch: 18 }, { wch: 18 }];
   XLSX.utils.book_append_sheet(wb, staffSheet, "Staff Performance");
 
+  // ── Damaged Goods ──
+  const damagedRows = [
+    ["Reason", "Units Lost", `Value Lost (${currency})`],
+    ...data.damagedGoods.byReason.map((r) => [r.reason, r.qty, r.value]),
+    [],
+    ["Total", data.damagedGoods.totalQty, data.damagedGoods.totalValue],
+  ];
+  const damagedSheet = XLSX.utils.aoa_to_sheet(damagedRows);
+  damagedSheet["!cols"] = [{ wch: 20 }, { wch: 14 }, { wch: 18 }];
+  XLSX.utils.book_append_sheet(wb, damagedSheet, "Damaged Goods");
+
   const filename = `report-${new Date().toISOString().slice(0, 10)}.xlsx`;
   XLSX.writeFile(wb, filename);
 }
@@ -224,6 +235,32 @@ export function exportToPdf(
     </table>
   </div>
 </div>
+
+${data.damagedGoods.byReason.length > 0 ? `
+<!-- Damaged Goods -->
+<div class="section">
+  <h2>Damaged Goods</h2>
+  <table>
+    <thead><tr>
+      <th>Reason</th>
+      <th class="right">Units Lost</th>
+      <th class="right">Value Lost</th>
+    </tr></thead>
+    <tbody>
+      ${data.damagedGoods.byReason.map((r) => `<tr>
+        <td>${escHtml(r.reason)}</td>
+        <td class="right">${r.qty.toLocaleString()}</td>
+        <td class="right red">${fmtAmt(r.value, currency)}</td>
+      </tr>`).join("")}
+      <tr>
+        <td style="font-weight:600">Total</td>
+        <td class="right" style="font-weight:600">${data.damagedGoods.totalQty.toLocaleString()}</td>
+        <td class="right red" style="font-weight:600">${fmtAmt(data.damagedGoods.totalValue, currency)}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+` : ""}
 
 <!-- Daily Revenue -->
 <div class="section">

@@ -36,11 +36,18 @@ export interface StaffMember {
   avgSale: number;
 }
 
+export interface DamagedGoods {
+  totalQty: number;
+  totalValue: number;
+  byReason: { reason: string; qty: number; value: number }[];
+}
+
 export interface ReportData {
   summary: ReportSummary;
   dailyRevenue: DailyRevenue[];
   topProducts: TopProduct[];
   staffPerformance: StaffMember[];
+  damagedGoods: DamagedGoods;
 }
 
 export function fmtAmt(n: number, currency: string) {

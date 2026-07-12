@@ -357,9 +357,11 @@ export default function InvoiceModal({ invoice, onClose, onSaved }: Props) {
                 >
                   <option>Draft</option>
                   <option>Sent</option>
-                  <option>Paid</option>
                   <option>Overdue</option>
                 </select>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  Use &ldquo;Mark as Paid&rdquo; from the invoice actions to record payment.
+                </p>
               </FormField>
             </div>
 

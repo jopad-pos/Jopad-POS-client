@@ -18,6 +18,7 @@ import {
 import InvoiceModal from "./components/InvoiceModal";
 import ViewInvoiceModal from "./components/ViewInvoiceModal";
 import DeleteConfirm from "./components/DeleteConfirm";
+import MarkPaidModal from "./components/MarkPaidModal";
 
 const PAGE_SIZE = 15;
 
@@ -36,6 +37,7 @@ export default function InvoicesPage() {
   const [editInvoice, setEditInvoice] = useState<Invoice | null>(null);
   const [viewInvoice, setViewInvoice] = useState<Invoice | null>(null);
   const [deleteInvoice, setDeleteInvoice] = useState<Invoice | null>(null);
+  const [payInvoice, setPayInvoice] = useState<Invoice | null>(null);
 
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -91,6 +93,12 @@ export default function InvoicesPage() {
   function handleDeleted(id: string) {
     setInvoices((prev) => prev.filter((i) => i._id !== id));
     setDeleteInvoice(null);
+    apiRequest<InvoiceStats>("/api/invoices/stats").then(setStats).catch(() => {});
+  }
+
+  function handlePaid(inv: Invoice) {
+    setInvoices((prev) => prev.map((i) => (i._id === inv._id ? inv : i)));
+    setPayInvoice(null);
     apiRequest<InvoiceStats>("/api/invoices/stats").then(setStats).catch(() => {});
   }
 
@@ -290,19 +298,33 @@ export default function InvoicesPage() {
                           <MoreHorizontal className="w-4 h-4" />
                         </button>
                         {openMenu === inv._id && (
-                          <div className="absolute right-0 top-7 w-36 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
-                            <button
-                              className="w-full text-left px-3 py-1.5 text-[12px] text-slate-700 hover:bg-slate-50"
-                              onClick={() => { setOpenMenu(null); setEditInvoice(inv); }}
-                            >
-                              Edit
-                            </button>
-                            <button
-                              className="w-full text-left px-3 py-1.5 text-[12px] text-red-600 hover:bg-red-50"
-                              onClick={() => { setOpenMenu(null); setDeleteInvoice(inv); }}
-                            >
-                              Delete
-                            </button>
+                          <div className="absolute right-0 top-7 w-40 bg-white border border-slate-200 rounded-lg shadow-lg z-20 py-1">
+                            {inv.status === "Paid" ? (
+                              <p className="px-3 py-1.5 text-[11px] text-slate-400">
+                                Paid — see Sales to void
+                              </p>
+                            ) : (
+                              <>
+                                <button
+                                  className="w-full text-left px-3 py-1.5 text-[12px] text-emerald-700 hover:bg-emerald-50"
+                                  onClick={() => { setOpenMenu(null); setPayInvoice(inv); }}
+                                >
+                                  Mark as Paid
+                                </button>
+                                <button
+                                  className="w-full text-left px-3 py-1.5 text-[12px] text-slate-700 hover:bg-slate-50"
+                                  onClick={() => { setOpenMenu(null); setEditInvoice(inv); }}
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  className="w-full text-left px-3 py-1.5 text-[12px] text-red-600 hover:bg-red-50"
+                                  onClick={() => { setOpenMenu(null); setDeleteInvoice(inv); }}
+                                >
+                                  Delete
+                                </button>
+                              </>
+                            )}
                           </div>
                         )}
                       </div>
@@ -328,6 +350,7 @@ export default function InvoicesPage() {
           invoice={viewInvoice}
           onClose={() => setViewInvoice(null)}
           onEdit={(inv) => setEditInvoice(inv)}
+          onMarkPaid={(inv) => setPayInvoice(inv)}
         />
       )}
       {deleteInvoice && (
@@ -335,6 +358,13 @@ export default function InvoicesPage() {
           invoice={deleteInvoice}
           onClose={() => setDeleteInvoice(null)}
           onDeleted={handleDeleted}
+        />
+      )}
+      {payInvoice && (
+        <MarkPaidModal
+          invoice={payInvoice}
+          onClose={() => setPayInvoice(null)}
+          onPaid={handlePaid}
         />
       )}
     </div>

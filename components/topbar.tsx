@@ -77,6 +77,10 @@ const pageMeta: Record<string, { title: string; subtitle: string }> = {
     title: "Branches",
     subtitle: "Manage your locations",
   },
+  "/dashboard/stock-transfers": {
+    title: "Stock Transfers",
+    subtitle: "Move stock between branches",
+  },
   "/dashboard/settings": {
     title: "Settings",
     subtitle: "Store configuration and preferences",

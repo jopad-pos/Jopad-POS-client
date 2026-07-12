@@ -8,6 +8,7 @@ import { printLabels } from "../labels/printLabels";
 import StockTable from "./components/StockTable";
 import ProductModal from "./components/ProductModal";
 import AdjustModal from "./components/AdjustModal";
+import DamageModal from "./components/DamageModal";
 import HistoryModal from "./components/HistoryModal";
 import DeleteConfirm from "./components/DeleteConfirm";
 import PurchaseModal from "../purchases/components/PurchaseModal";
@@ -46,9 +47,10 @@ export default function StockPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<Product | null>(null);
   const [adjustProduct, setAdjustProduct] = useState<Product | null>(null);
+  const [damageProduct, setDamageProduct] = useState<Product | null>(null);
   const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
   const [deleteProduct, setDeleteProduct] = useState<Product | null>(null);
-  const [purchaseProduct, setPurchaseProduct] = useState<Product | null>(null);
+  const [orderProducts, setOrderProducts] = useState<Product[] | null>(null);
   const [pendingOrderProductIds, setPendingOrderProductIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -149,6 +151,12 @@ export default function StockPage() {
     setAdjustProduct(null);
   };
 
+  const handleDamaged = (updated: Product) => {
+    setProducts((prev) => prev.map((p) => (p._id === updated._id ? updated : p)));
+    apiRequest<StatsData>("/api/products/stats").then(setStats).catch(() => {});
+    setDamageProduct(null);
+  };
+
   const handleDeleted = (id: string) => {
     setProducts((prev) => prev.filter((p) => p._id !== id));
     apiRequest<StatsData>("/api/products/stats").then(setStats).catch(() => {});
@@ -213,8 +221,10 @@ export default function StockPage() {
         onEdit={setEditProduct}
         onAdjust={setAdjustProduct}
         onHistory={setHistoryProduct}
+        onDamage={setDamageProduct}
         onDelete={setDeleteProduct}
-        onPurchaseOrder={setPurchaseProduct}
+        onPurchaseOrder={(p) => setOrderProducts([p])}
+        onBulkOrder={setOrderProducts}
       onPrintLabel={(p) => printLabels([p], { size: "medium", copies: 1, showName: true, showPrice: true, showSku: true })}
       pendingOrderProductIds={pendingOrderProductIds}
       />
@@ -249,6 +259,13 @@ export default function StockPage() {
           onAdjusted={handleAdjusted}
         />
       )}
+      {damageProduct && (
+        <DamageModal
+          product={damageProduct}
+          onClose={() => setDamageProduct(null)}
+          onDamaged={handleDamaged}
+        />
+      )}
       {historyProduct && (
         <HistoryModal product={historyProduct} onClose={() => setHistoryProduct(null)} />
       )}
@@ -259,23 +276,23 @@ export default function StockPage() {
           onDeleted={handleDeleted}
         />
       )}
-      {purchaseProduct && (
+      {orderProducts && orderProducts.length > 0 && (
         <PurchaseModal
           purchase={null}
-          initialLineItems={[{
-            productId: purchaseProduct._id,
-            name: purchaseProduct.name,
+          initialLineItems={orderProducts.map((p) => ({
+            productId: p._id,
+            name: p.name,
             qty: "1",
-            buyPrice: String(purchaseProduct.buyPrice),
-          }]}
-          onClose={() => setPurchaseProduct(null)}
+            buyPrice: String(p.buyPrice),
+          }))}
+          onClose={() => setOrderProducts(null)}
           onSaved={(saved) => {
             setPendingOrderProductIds((prev) => {
               const next = new Set(prev);
               for (const ids of pendingProductIdSet([saved])) next.add(ids);
               return next;
             });
-            setPurchaseProduct(null);
+            setOrderProducts(null);
           }}
         />
       )}

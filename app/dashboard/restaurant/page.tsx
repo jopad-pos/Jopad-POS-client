@@ -19,6 +19,8 @@ import SeatReservationModal from "./components/SeatReservationModal";
 import CancelReservationConfirm from "./components/CancelReservationConfirm";
 import NoShowConfirm from "./components/NoShowConfirm";
 import KitchenDisplay from "./components/KitchenDisplay";
+import HistoryTable from "./components/HistoryTable";
+import OrderHistoryModal from "./components/OrderHistoryModal";
 import type {
   MenuItem,
   MenuStats,
@@ -38,7 +40,7 @@ export default function RestaurantPage() {
   );
 }
 
-type Tab = "tables" | "menu" | "reservations" | "kitchen";
+type Tab = "tables" | "menu" | "reservations" | "kitchen" | "history";
 
 function RestaurantDashboard() {
   const { profile } = useAuth();
@@ -47,6 +49,7 @@ function RestaurantDashboard() {
 
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [openOrders, setOpenOrders] = useState<Order[]>([]);
+  const [historyOrders, setHistoryOrders] = useState<Order[]>([]);
   const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
   const [menuCategories, setMenuCategories] = useState<string[]>([]);
   const [reservations, setReservations] = useState<Reservation[]>([]);
@@ -88,6 +91,11 @@ function RestaurantDashboard() {
   const [resSearch, setResSearch] = useState("");
   const [resStatusFilter, setResStatusFilter] = useState("All");
 
+  // History filters
+  const [historySearch, setHistorySearch] = useState("");
+  const [historyStatusFilter, setHistoryStatusFilter] = useState("All");
+  const [viewHistoryOrder, setViewHistoryOrder] = useState<Order | null>(null);
+
   // Table modals
   const [addTableOpen, setAddTableOpen] = useState(false);
   const [editTable, setEditTable] = useState<RestaurantTable | null>(null);
@@ -114,6 +122,8 @@ function RestaurantDashboard() {
       const [
         tablesRes,
         ordersRes,
+        closedRes,
+        cancelledRes,
         menuRes,
         catsRes,
         reservationsRes,
@@ -124,6 +134,8 @@ function RestaurantDashboard() {
       ] = await Promise.all([
         apiRequest<{ items: RestaurantTable[] }>(`/api/tables?limit=500${branchQuery}`),
         apiRequest<{ items: Order[] }>(`/api/orders?status=open&limit=500${branchQuery}`),
+        apiRequest<{ items: Order[] }>(`/api/orders?status=closed&limit=500${branchQuery}`),
+        apiRequest<{ items: Order[] }>(`/api/orders?status=cancelled&limit=500${branchQuery}`),
         apiRequest<{ items: MenuItem[] }>(`/api/menu-items?limit=500${branchQuery}`),
         apiRequest<string[]>(`/api/menu-items/categories?1=1${branchQuery}`),
         apiRequest<{ items: Reservation[] }>(`/api/reservations?limit=500${branchQuery}`),
@@ -134,6 +146,12 @@ function RestaurantDashboard() {
       ]);
       setTables(tablesRes.items);
       setOpenOrders(ordersRes.items);
+      setHistoryOrders(
+        [...closedRes.items, ...cancelledRes.items].sort(
+          (a, b) =>
+            new Date(b.closedAt || b.openedAt).getTime() - new Date(a.closedAt || a.openedAt).getTime(),
+        ),
+      );
       setMenuItems(menuRes.items);
       setMenuCategories(catsRes);
       setReservations(reservationsRes.items);
@@ -339,6 +357,7 @@ function RestaurantDashboard() {
             { key: "menu", label: "Menu" },
             { key: "reservations", label: "Reservations" },
             { key: "kitchen", label: "Kitchen" },
+            { key: "history", label: "History" },
           ] as const
         ).map((t) => (
           <button
@@ -402,6 +421,18 @@ function RestaurantDashboard() {
       )}
 
       {tab === "kitchen" && <KitchenDisplay />}
+
+      {tab === "history" && (
+        <HistoryTable
+          orders={historyOrders}
+          loading={loading}
+          search={historySearch}
+          onSearchChange={setHistorySearch}
+          statusFilter={historyStatusFilter}
+          onStatusChange={setHistoryStatusFilter}
+          onView={setViewHistoryOrder}
+        />
+      )}
 
       {/* Table modals */}
       {addTableOpen && (
@@ -496,6 +527,11 @@ function RestaurantDashboard() {
           onClose={() => setNoShowReservation(null)}
           onMarked={handleReservationNoShow}
         />
+      )}
+
+      {/* History modal */}
+      {viewHistoryOrder && (
+        <OrderHistoryModal order={viewHistoryOrder} onClose={() => setViewHistoryOrder(null)} />
       )}
     </div>
   );

@@ -10,6 +10,9 @@ import BookingsTable from "./components/BookingsTable";
 import RoomModal from "./components/RoomModal";
 import CheckInModal from "./components/CheckInModal";
 import CheckOutModal from "./components/CheckOutModal";
+import ReservationCheckInModal from "./components/ReservationCheckInModal";
+import BookingDetailsModal from "./components/BookingDetailsModal";
+import EditReservationModal from "./components/EditReservationModal";
 import DeleteRoomConfirm from "./components/DeleteRoomConfirm";
 import CancelBookingConfirm from "./components/CancelBookingConfirm";
 import type { Booking, BookingStats, Room, RoomStats } from "./components/types";
@@ -40,6 +43,7 @@ function HotelDashboard() {
     inHouse: 0,
     arrivalsToday: 0,
     departuresToday: 0,
+    upcoming: 0,
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -51,9 +55,12 @@ function HotelDashboard() {
   const [addRoomOpen, setAddRoomOpen] = useState(false);
   const [editRoom, setEditRoom] = useState<Room | null>(null);
   const [deleteRoom, setDeleteRoom] = useState<Room | null>(null);
-  const [checkInRoom, setCheckInRoom] = useState<Room | null>(null);
+  const [bookRoom, setBookRoom] = useState<{ room: Room; mode: "checkin" | "reserve" } | null>(null);
+  const [checkInReservation, setCheckInReservation] = useState<Booking | null>(null);
   const [checkOutBooking, setCheckOutBooking] = useState<Booking | null>(null);
   const [cancelBooking, setCancelBooking] = useState<Booking | null>(null);
+  const [detailsBooking, setDetailsBooking] = useState<Booking | null>(null);
+  const [editBooking, setEditBooking] = useState<Booking | null>(null);
 
   const branchParam = selectedBranchId ? `&branchId=${selectedBranchId}` : "";
   const branchQuery = selectedBranchId ? `?branchId=${selectedBranchId}` : "";
@@ -87,8 +94,8 @@ function HotelDashboard() {
   const cards = [
     { label: "Rooms", value: roomStats.total, sub: "total rooms" },
     { label: "Occupied", value: roomStats.occupied, sub: `${roomStats.occupancyRate}% occupancy` },
-    { label: "Available", value: roomStats.available, sub: "ready to book" },
     { label: "In-house Guests", value: bookingStats.inHouse, sub: `${bookingStats.arrivalsToday} arrivals today` },
+    { label: "Reservations", value: bookingStats.upcoming, sub: "upcoming stays" },
   ];
 
   function handleRoomSaved(saved: Room) {
@@ -112,9 +119,15 @@ function HotelDashboard() {
     load();
   }
 
-  function handleCheckedIn(booking: Booking) {
+  function handleBooked(booking: Booking) {
     setBookings((prev) => [booking, ...prev]);
-    setCheckInRoom(null);
+    setBookRoom(null);
+    load();
+  }
+
+  function handleReservationCheckedIn(updated: Booking) {
+    setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
+    setCheckInReservation(null);
     load();
   }
 
@@ -127,6 +140,12 @@ function HotelDashboard() {
   function handleCancelled(updated: Booking) {
     setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
     setCancelBooking(null);
+    load();
+  }
+
+  function handleReservationEdited(updated: Booking) {
+    setBookings((prev) => prev.map((b) => (b._id === updated._id ? updated : b)));
+    setEditBooking(null);
     load();
   }
 
@@ -181,7 +200,8 @@ function HotelDashboard() {
           loading={loading}
           isOwner={isOwner}
           onAddRoom={() => setAddRoomOpen(true)}
-          onCheckIn={setCheckInRoom}
+          onCheckIn={(room) => setBookRoom({ room, mode: "checkin" })}
+          onReserve={(room) => setBookRoom({ room, mode: "reserve" })}
           onCheckOut={openCheckOutForRoom}
           onEditRoom={setEditRoom}
           onDeleteRoom={setDeleteRoom}
@@ -194,8 +214,11 @@ function HotelDashboard() {
           onSearchChange={setSearch}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
+          onCheckIn={setCheckInReservation}
           onCheckOut={setCheckOutBooking}
           onCancel={setCancelBooking}
+          onViewDetails={setDetailsBooking}
+          onEdit={setEditBooking}
         />
       )}
 
@@ -212,11 +235,19 @@ function HotelDashboard() {
           onDeleted={handleRoomDeleted}
         />
       )}
-      {checkInRoom && (
+      {bookRoom && (
         <CheckInModal
-          room={checkInRoom}
-          onClose={() => setCheckInRoom(null)}
-          onCheckedIn={handleCheckedIn}
+          room={bookRoom.room}
+          initialMode={bookRoom.mode}
+          onClose={() => setBookRoom(null)}
+          onCheckedIn={handleBooked}
+        />
+      )}
+      {checkInReservation && (
+        <ReservationCheckInModal
+          booking={checkInReservation}
+          onClose={() => setCheckInReservation(null)}
+          onCheckedIn={handleReservationCheckedIn}
         />
       )}
       {checkOutBooking && (
@@ -231,6 +262,20 @@ function HotelDashboard() {
           booking={cancelBooking}
           onClose={() => setCancelBooking(null)}
           onCancelled={handleCancelled}
+        />
+      )}
+      {detailsBooking && (
+        <BookingDetailsModal
+          booking={detailsBooking}
+          onClose={() => setDetailsBooking(null)}
+        />
+      )}
+      {editBooking && (
+        <EditReservationModal
+          booking={editBooking}
+          rooms={rooms}
+          onClose={() => setEditBooking(null)}
+          onSaved={handleReservationEdited}
         />
       )}
     </div>

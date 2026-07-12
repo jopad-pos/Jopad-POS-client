@@ -34,9 +34,11 @@ const ACTION_LABELS: Record<string, string> = {
   "expense.deleted": "Expense deleted",
   "purchase.deleted": "Purchase deleted",
   "invoice.deleted": "Invoice deleted",
+  "invoice.paid": "Invoice paid",
   "quotation.deleted": "Quotation deleted",
   "order.voided": "Order voided",
   "booking.cancelled": "Booking cancelled",
+  "product.damaged": "Damaged goods recorded",
 };
 
 const ACTION_STYLES: Record<string, string> = {
@@ -54,9 +56,11 @@ const ACTION_STYLES: Record<string, string> = {
   "expense.deleted": "bg-red-50 text-red-600",
   "purchase.deleted": "bg-red-50 text-red-600",
   "invoice.deleted": "bg-red-50 text-red-600",
+  "invoice.paid": "bg-emerald-50 text-emerald-700",
   "quotation.deleted": "bg-red-50 text-red-600",
   "order.voided": "bg-amber-50 text-amber-700",
   "booking.cancelled": "bg-amber-50 text-amber-700",
+  "product.damaged": "bg-orange-50 text-orange-700",
 };
 
 function describeEvent(log: AuditLogItem): string {
@@ -90,12 +94,16 @@ function describeEvent(log: AuditLogItem): string {
       return `Deleted purchase ${log.targetLabel}`;
     case "invoice.deleted":
       return `Deleted invoice ${log.targetLabel}`;
+    case "invoice.paid":
+      return `Marked invoice ${log.targetLabel} as paid via ${d.method} (${d.saleRef})`;
     case "quotation.deleted":
       return `Deleted quotation ${log.targetLabel}`;
     case "order.voided":
       return `Voided order ${log.targetLabel}`;
     case "booking.cancelled":
       return `Cancelled stay ${log.targetLabel}`;
+    case "product.damaged":
+      return `Wrote off ${d.qty} × "${log.targetLabel}" as damaged (${d.reason})`;
     default:
       return log.action;
   }

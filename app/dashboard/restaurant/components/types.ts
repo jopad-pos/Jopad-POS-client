@@ -202,6 +202,18 @@ export const KITCHEN_NEXT_STATUS: Record<Exclude<KitchenStatus, "served">, Kitch
   ready: "served",
 };
 
+export const ORDER_STATUS_STYLES: Record<Exclude<OrderStatus, "open">, string> = {
+  closed: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  cancelled: "bg-red-50 text-red-600 border-red-200",
+};
+
+export const PAYMENT_METHOD_STYLES: Record<PayMethod, string> = {
+  Cash: "bg-slate-100 text-slate-600",
+  "Mobile Money": "bg-purple-50 text-purple-700",
+  Card: "bg-blue-50 text-blue-700",
+  Credit: "bg-amber-50 text-amber-700",
+};
+
 export const RESERVATION_STATUS_STYLES: Record<ReservationStatus, string> = {
   booked: "bg-blue-50 text-blue-700 border-blue-200",
   waiting: "bg-amber-50 text-amber-700 border-amber-200",

@@ -1,5 +1,6 @@
 export type RoomStatus = "available" | "occupied" | "maintenance";
-export type BookingStatus = "checked-in" | "checked-out" | "cancelled";
+export type BookingStatus = "reserved" | "checked-in" | "checked-out" | "cancelled";
+export type PaymentStatus = "unpaid" | "paid";
 export type PayMethod = "Cash" | "Mobile Money" | "Card" | "Credit";
 
 export interface Room {
@@ -36,6 +37,8 @@ export interface Booking {
   nights: number;
   totalCharge: number;
   paymentMethod: PayMethod | null;
+  paymentStatus: PaymentStatus;
+  paidAt: string | null;
   saleId: string | null;
   status: BookingStatus;
   notes: string;
@@ -54,6 +57,7 @@ export interface BookingStats {
   inHouse: number;
   arrivalsToday: number;
   departuresToday: number;
+  upcoming: number;
 }
 
 export function formatMoney(amount: number, currency = "UGX"): string {
@@ -67,6 +71,21 @@ export function formatDateTime(value: string | null): string {
     month: "short",
     hour: "2-digit",
     minute: "2-digit",
+  });
+}
+
+/** Converts an ISO date(-time) string to a `YYYY-MM-DD` value for a date input. */
+export function toDateInputValue(value: string | null): string {
+  if (!value) return "";
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+export function formatDate(value: string | null): string {
+  if (!value) return "—";
+  return new Date(value).toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
   });
 }
 
@@ -99,7 +118,15 @@ export const ROOM_STATUS_STYLES: Record<RoomStatus, { label: string; dot: string
 };
 
 export const BOOKING_STATUS_STYLES: Record<BookingStatus, string> = {
+  reserved: "bg-violet-50 text-violet-700 border-violet-200",
   "checked-in": "bg-blue-50 text-blue-700 border-blue-200",
   "checked-out": "bg-slate-100 text-slate-600 border-slate-200",
   cancelled: "bg-red-50 text-red-600 border-red-200",
+};
+
+export const BOOKING_STATUS_LABEL: Record<BookingStatus, string> = {
+  reserved: "Reserved",
+  "checked-in": "In-house",
+  "checked-out": "Checked out",
+  cancelled: "Cancelled",
 };
